@@ -15,6 +15,28 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Lenis smooth scrolling (Project Gallery card stack — Skiper 16 reference).
+   While Lenis owns the scroll it neutralizes the rule above, and root mode
+   needs height/overscroll behavior kept correct. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis [data-lenis-prevent],
+.lenis [data-lenis-prevent-wheel],
+.lenis [data-lenis-prevent-touch] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
 body {
   min-height: 100vh;
   margin: 0;

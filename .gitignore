@@ -10,3 +10,6 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 *.zip
+
+# local dev server redirect logs
+/dev*.log

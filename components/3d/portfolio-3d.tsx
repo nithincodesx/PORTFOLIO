@@ -3,6 +3,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
+import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    OBSIDIAN EDITORIAL PORTFOLIO
@@ -112,7 +113,7 @@ const MATRIX_COLUMNS = [
   "110 NITHIN 010 NITHIN",
 ];
 
-export function EditorialPortfolio() {
+export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -245,7 +246,8 @@ export function EditorialPortfolio() {
           color: var(--white);
           font-family: 'Inter', sans-serif;
           min-height: 100vh;
-          overflow-x: hidden;
+          /* overflow-x: clip (not hidden) so position: sticky works in descendants */
+          overflow-x: clip;
           cursor: none;
         }
 
@@ -912,6 +914,11 @@ export function EditorialPortfolio() {
           ))}
         </div>
       </section>
+
+      <div className="divider" />
+
+      {/* ── Project Gallery (sticky image stack) ─────────────────────── */}
+      <ProjectGallery images={galleryImages} />
 
       <div className="divider" />
 
