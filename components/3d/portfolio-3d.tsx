@@ -1,10 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
+import { ChapterIndicator } from "@/components/motion/chapter-indicator";
+import { MagneticButton } from "@/components/motion/magnetic-button";
 import type { RenderableSectionId } from "@/lib/cms/types";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -40,6 +42,7 @@ const MATRIX_COLUMNS = [
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
+  const projectPreviewRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -49,10 +52,21 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
     config;
   const [openProject, setOpenProject] = useState<string | null>(null);
+  const [activeChapter, setActiveChapter] = useState<string | null>("home");
+  const [previewProject, setPreviewProject] = useState<(typeof projects.items)[number] | null>(null);
   const orderedSections = [...config.sections]
     .sort((a, b) => a.order - b.order)
     .filter((entry) => entry.visible);
   const visibleSectionIds = new Set<string>(orderedSections.map((entry) => entry.id));
+  const chapterItems = useMemo(
+    () => [
+      { id: "home", label: "Signal" },
+      ...orderedSections
+        .filter(({ id }) => id !== "hero" && id !== "marquee" && id !== "gallery")
+        .map(({ id, label }) => ({ id, label })),
+    ],
+    [config.sections],
+  );
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -96,6 +110,20 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
 
+    const chapterObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target.id) setActiveChapter(visible.target.id);
+      },
+      { rootMargin: "-35% 0px -55% 0px", threshold: [0.05, 0.2, 0.5] },
+    );
+    chapterItems.forEach(({ id }) => {
+      const section = document.getElementById(id);
+      if (section) chapterObserver.observe(section);
+    });
+
     /* ── Navbar hide on scroll down ── */
     let lastY = 0;
     const nav = document.getElementById("main-nav");
@@ -131,11 +159,12 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         el.removeEventListener("mouseleave", leaveHover);
       });
       io.disconnect();
+      chapterObserver.disconnect();
       if (marqueeRaf) cancelAnimationFrame(marqueeRaf);
     };
     /* Re-runs when config resolves/changes so freshly rendered or reordered
        sections get their reveal observers and marquee track re-attached. */
-  }, [config]);
+  }, [chapterItems, config]);
 
   /* ── Keep the contribution calendar aligned with the hero buttons ──
      The graph mirrors the rendered width of the "View Work" / "Get In Touch"
@@ -155,6 +184,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     observer.observe(buttons);
     return () => observer.disconnect();
   }, []);
+
+  const handleProjectPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const preview = projectPreviewRef.current;
+    if (!preview || event.pointerType === "touch") return;
+    preview.style.setProperty("--preview-x", `${event.clientX + 26}px`);
+    preview.style.setProperty("--preview-y", `${event.clientY + 26}px`);
+  };
 
   /* ── GitHub contribution calendar is rendered inside the hero (see
      <ContributionCalendar /> below) — it loads its own real contribution data
@@ -258,7 +294,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           text-decoration: none;
           transition: opacity 0.3s;
         }
-        .nav-available:hover { opacity: 0.7; }
+         .nav-available:hover { opacity: 0.7; }
+         .nav-link:focus-visible, .nav-available:focus-visible, .nav-logo:focus-visible,
+         .btn-solid:focus-visible, .btn-ghost:focus-visible, .social-link:focus-visible,
+         .footer-logo:focus-visible, .project-open-link:focus-visible {
+           outline: 1px solid var(--amber);
+           outline-offset: 0.35rem;
+         }
 
         /* ── Section wrapper ───────────────────────────────────────── */
         .ed-container {
@@ -284,15 +326,40 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Hero ──────────────────────────────────────────────────── */
-        .hero {
+         .hero {
           min-height: 100vh;
           display: flex; flex-direction: column; justify-content: flex-end;
           padding-top: 9rem;
           padding-bottom: 4rem;
           position: relative;
           isolation: isolate;
-          overflow: hidden;
-        }
+           overflow: hidden;
+         }
+         .hero::before {
+           content: '';
+           position: absolute;
+           inset: 0;
+           z-index: -1;
+           opacity: 0.28;
+           background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+           background-size: 5rem 5rem;
+           mask-image: linear-gradient(to bottom, transparent, black 20%, black 72%, transparent);
+         }
+         .hero::after {
+           content: '';
+           position: absolute;
+           top: 18%;
+           right: -12rem;
+           width: 32rem;
+           height: 32rem;
+           z-index: -1;
+           border: 1px solid rgba(245,166,35,0.18);
+           border-radius: 50%;
+           box-shadow: 0 0 0 2rem rgba(245,166,35,0.025), 0 0 0 6rem rgba(245,166,35,0.02);
+           animation: hero-orbit 18s linear infinite;
+           pointer-events: none;
+         }
+         @keyframes hero-orbit { to { transform: rotate(360deg); } }
         .matrix-rain {
           position: absolute;
           inset: 0;
@@ -353,12 +420,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-headline .accent-dot { color: var(--amber); }
 
         /* Text reveal */
-        .reveal-text {
-          opacity: 0;
-          transform: translateY(50px);
-          transition: opacity 1s var(--ease-expo), transform 1s var(--ease-expo);
-        }
-        .reveal-text.visible { opacity: 1; transform: translateY(0); }
+         .reveal-text {
+           opacity: 0;
+           transform: translateY(50px);
+           transition: opacity 1s var(--ease-expo), transform 1s var(--ease-expo);
+         }
+         .reveal-text { animation: hero-line-in 1.15s var(--ease-expo) both; }
+         .reveal-text.delay-1 { animation-delay: 120ms; }
+         .reveal-text.delay-2 { animation-delay: 240ms; }
+         @keyframes hero-line-in { from { opacity: 0; transform: translateY(50px); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); } }
+         .reveal-text.visible { opacity: 1; transform: translateY(0); }
 
         /* Scroll fade */
         .scroll-fade {
@@ -370,7 +441,39 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .delay-1 { transition-delay: 100ms; }
         .delay-2 { transition-delay: 200ms; }
         .delay-3 { transition-delay: 320ms; }
-        .delay-4 { transition-delay: 440ms; }
+         .delay-4 { transition-delay: 440ms; }
+         .hero-signal {
+           position: absolute;
+           top: 7.5rem;
+           left: 4rem;
+           display: flex;
+           align-items: center;
+           gap: 0.65rem;
+           z-index: 1;
+           color: var(--muted);
+           font-family: 'JetBrains Mono', monospace;
+           font-size: 0.6rem;
+           letter-spacing: 0.18em;
+           text-transform: uppercase;
+         }
+         .hero-signal::before { content: ''; width: 0.45rem; height: 0.45rem; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); animation: signal-pulse 2.4s ease-in-out infinite; }
+         @keyframes signal-pulse { 50% { box-shadow: 0 0 0 0.55rem rgba(245,166,35,0); } }
+         .scroll-cue {
+           position: absolute;
+           bottom: 4.2rem;
+           right: 4rem;
+           display: flex;
+           align-items: center;
+           gap: 0.6rem;
+           color: var(--muted);
+           font-family: 'JetBrains Mono', monospace;
+           font-size: 0.58rem;
+           letter-spacing: 0.16em;
+           text-transform: uppercase;
+           writing-mode: vertical-rl;
+         }
+         .scroll-cue::after { content: ''; width: 1px; height: 3rem; background: linear-gradient(var(--amber), transparent); animation: cue-line 1.8s ease-in-out infinite; }
+         @keyframes cue-line { 50% { transform: scaleY(0.55); transform-origin: top; opacity: 0.45; } }
 
         .hero-sub {
           display: grid;
@@ -540,6 +643,27 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            text-decoration: none;
          }
          .project-open-link:hover { text-decoration: underline; }
+         .project-preview {
+           position: fixed;
+           top: 0;
+           left: 0;
+           z-index: 70;
+           width: min(22rem, 34vw);
+           pointer-events: none;
+           opacity: 0;
+           transform: translate3d(var(--preview-x, -50%), var(--preview-y, -50%), 0) rotate(3deg) scale(0.92);
+           transform-origin: center;
+           transition: opacity 220ms ease, transform 320ms var(--ease-expo);
+         }
+         .project-preview[data-visible="true"] { opacity: 1; transform: translate3d(var(--preview-x, -50%), var(--preview-y, -50%), 0) rotate(-3deg) scale(1); }
+         .project-preview-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border: 1px solid rgba(245,166,35,0.5); background: var(--surface); box-shadow: 1rem 1rem 0 rgba(245,166,35,0.08), 0 1.5rem 3rem rgba(0,0,0,0.45); }
+         .project-preview-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(130deg, transparent 35%, rgba(245,166,35,0.2), transparent 65%); transform: translateX(-100%); animation: preview-scan 2.4s ease-in-out infinite; }
+         @keyframes preview-scan { 55%, 100% { transform: translateX(100%); } }
+         .project-preview img { width: 100%; height: 100%; display: block; object-fit: cover; opacity: 0.78; filter: saturate(0.6) contrast(1.15); }
+         .project-preview-placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: var(--amber); background: radial-gradient(circle at 50% 35%, rgba(245,166,35,0.22), transparent 32%), repeating-linear-gradient(135deg, transparent 0 0.7rem, rgba(255,255,255,0.04) 0.7rem 0.75rem); font-family: 'Syne', sans-serif; font-size: 6rem; font-weight: 800; letter-spacing: -0.08em; }
+         .project-preview-copy { padding: 0.8rem 0.9rem; border: 1px solid rgba(245,166,35,0.35); border-top: 0; background: rgba(12,12,12,0.95); }
+         .project-preview-kicker { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; }
+         .project-preview-title { display: block; margin-top: 0.35rem; color: var(--white); font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; line-height: 1.1; }
 
          /* ── About and skills ─────────────────────────────────────── */
          .about-section, .skills-section { padding: 6rem 0; }
@@ -728,7 +852,10 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           display: inline-block;
           margin-bottom: 2.5rem;
         }
-        .contact-email:hover { border-color: var(--amber); color: var(--amber); }
+         .contact-email:hover { border-color: var(--amber); color: var(--amber); }
+         .contact-orbit { position: relative; display: inline-block; }
+         .contact-orbit::after { content: ''; position: absolute; inset: -1.4rem -2rem; border: 1px solid rgba(245,166,35,0.2); border-radius: 50%; transform: rotate(-8deg); pointer-events: none; transition: transform 0.5s var(--ease-expo), border-color 0.3s ease; }
+         .contact-orbit:hover::after { transform: rotate(5deg) scale(1.03); border-color: rgba(245,166,35,0.7); }
         .contact-actions { display: flex; gap: 1rem; margin-bottom: 4rem; flex-wrap: wrap; }
         .social-row { display: flex; gap: 2rem; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 2rem; }
         .social-link {
@@ -781,12 +908,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            .project-tags { display: none; }
            .about-grid { grid-template-columns: 1fr; gap: 2rem; }
            .project-description { margin-left: 1.5rem; margin-right: 1.5rem; }
+           .hero-signal { left: 1.5rem; }
+           .scroll-cue { right: 1.5rem; bottom: 2rem; }
+           .hero::after { right: -18rem; top: 20%; }
          }
 
          @media (pointer: coarse) { .editorial-root, .project-row, .service-card { cursor: auto; } #ed-cursor { display: none; } }
          @media (prefers-reduced-motion: reduce) {
            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
            .marquee-track { transform: none !important; }
+           .hero::after, .hero-signal::before, .scroll-cue::after, .project-preview-frame::after { animation: none; }
+           .reveal-text { animation: none; }
          }
 
         /* ── Scroll bar ────────────────────────────────────────────── */
@@ -799,15 +931,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       <div id="ed-cursor" ref={cursorRef} />
 
       {/* ── Navbar ───────────────────────────────────────────────── */}
-      <nav id="main-nav">
+       <nav id="main-nav">
         <a href="#home" className="nav-logo">NK.</a>
         <div className="nav-links">
           {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id)).map((link) => (
             <a key={link.id} href={`#${link.id}`} className="nav-link">{link.label}</a>
           ))}
         </div>
-        <a href="#contact" className="nav-available">Available →</a>
-      </nav>
+         <a href="#contact" className="nav-available">Available →</a>
+       </nav>
+       <ChapterIndicator items={chapterItems} activeId={activeChapter} />
 
       {orderedSections.map((section) => (
         <Fragment key={section.id}>
@@ -815,6 +948,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {section.id === "hero" && (
             <>
       <section id="home" className="hero ed-container">
+        <div className="hero-signal" aria-hidden="true">Live signal / portfolio 01</div>
         <div className="matrix-rain" aria-hidden="true">
           {MATRIX_COLUMNS.map((column, index) => (
             <span
@@ -845,14 +979,15 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           </p>
           <div className="hero-actions-block">
             <div className="hero-buttons" ref={buttonsRef}>
-              <a href={hero.primaryCta.href} className="btn-solid">{hero.primaryCta.label}</a>
-              <a href={hero.secondaryCta.href} className="btn-ghost">{hero.secondaryCta.label}</a>
+              <MagneticButton href={hero.primaryCta.href} className="btn-solid">{hero.primaryCta.label}</MagneticButton>
+              <MagneticButton href={hero.secondaryCta.href} className="btn-ghost">{hero.secondaryCta.label}</MagneticButton>
             </div>
             <div className="hero-stats" ref={statsRef}>
               <ContributionCalendar />
             </div>
           </div>
         </div>
+        <div className="scroll-cue" aria-hidden="true">Scroll to explore</div>
       </section>
             </>
           )}
@@ -904,14 +1039,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
             <p className="section-label">{projects.label}</p>
             <p className="section-big-num">{projects.number}</p>
           </div>
-          <a
+          <MagneticButton
             href={projects.allProjectsHref}
             target="_blank" rel="noreferrer"
             className="btn-ghost"
             style={{ alignSelf: "flex-end" }}
           >
             {projects.allProjectsLabel}
-          </a>
+          </MagneticButton>
         </div>
 
         <div className="project-list">
@@ -919,11 +1054,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
             const isOpen = openProject === p.num;
             return (
               <div key={p.num} className={`project-item scroll-fade delay-${(i % 4) + 1}`}>
-                <button
-                  type="button"
-                  className="project-row"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenProject(isOpen ? null : p.num)}
+                 <button
+                   type="button"
+                   className="project-row"
+                   aria-expanded={isOpen}
+                   onPointerEnter={() => setPreviewProject(p)}
+                   onPointerMove={handleProjectPointerMove}
+                   onPointerLeave={() => setPreviewProject(null)}
+                   onClick={() => setOpenProject(isOpen ? null : p.num)}
                 >
                   <div className="project-left">
                     <span className="project-num">{p.num}</span>
@@ -1067,8 +1205,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         </a>
 
         <div className="contact-actions scroll-fade delay-3">
-          <a href={`mailto:${contact.email}`} className="btn-solid">{contact.messageLabel}</a>
-          <a href={contact.resumeUrl} target="_blank" rel="noreferrer" className="btn-ghost">{contact.cvLabel}</a>
+          <MagneticButton href={`mailto:${contact.email}`} className="btn-solid">{contact.messageLabel}</MagneticButton>
+          <MagneticButton href={contact.resumeUrl} target="_blank" rel="noreferrer" className="btn-ghost">{contact.cvLabel}</MagneticButton>
         </div>
 
         <div className="social-row scroll-fade delay-4">
@@ -1092,6 +1230,29 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         <p className="footer-copy">{content.footer.copyright}</p>
         <p className="footer-copy">{content.footer.credit}</p>
       </footer>
+      {previewProject && (
+        <div
+          ref={projectPreviewRef}
+          className="project-preview"
+          data-visible="true"
+          aria-hidden="true"
+        >
+          <div className="project-preview-frame">
+            {galleryImages.length > 0 ? (
+              <img
+                src={galleryImages[projects.items.indexOf(previewProject) % galleryImages.length].src}
+                alt=""
+              />
+            ) : (
+              <div className="project-preview-placeholder">{previewProject.num}</div>
+            )}
+          </div>
+          <div className="project-preview-copy">
+            <span className="project-preview-kicker">Project signal / {previewProject.year}</span>
+            <strong className="project-preview-title">{previewProject.title}</strong>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
