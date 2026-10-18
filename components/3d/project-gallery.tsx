@@ -42,7 +42,17 @@ function GalleryStack({ images }: { images: GalleryImage[] }) {
     </div>
   );
 }
-export function ProjectGallery({ images }: { images: GalleryImage[] }) {
+export function ProjectGallery({
+  images,
+  label = "— Project Gallery",
+  title = "Project Gallery",
+  hint = "Scroll to stack ↓",
+}: {
+  images: GalleryImage[];
+  label?: string;
+  title?: string;
+  hint?: string;
+}) {
   if (images.length === 0) return null;
   return (
     <section className="pg-section">
@@ -66,9 +76,9 @@ export function ProjectGallery({ images }: { images: GalleryImage[] }) {
         @media (prefers-reduced-motion: reduce) { .pg-card.is-active .pg-sheen { animation: none; opacity: 0.35; } }
       `}</style>
       <div className="pg-head scroll-fade">
-        <p className="section-label" style={{ textAlign: "center" }}>— Project Gallery</p>
-        <p className="pg-label">Project Gallery</p>
-        <p className="pg-hint">Scroll to stack ↓</p>
+        <p className="section-label" style={{ textAlign: "center" }}>{label}</p>
+        <p className="pg-label">{title}</p>
+        <p className="pg-hint">{hint}</p>
       </div>
       <GalleryStack images={images} />
     </section>

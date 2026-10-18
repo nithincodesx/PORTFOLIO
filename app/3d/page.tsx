@@ -41,6 +41,10 @@ export const metadata: Metadata = {
     "AI Engineer building voice AI, autonomous agents, and reliable RAG systems. Premium editorial portfolio.",
 };
 
+/* ISR: the page HTML re-renders from Firestore every 60 seconds, so control
+   panel edits reach the public site without any redeploy. */
+export const revalidate = 60;
+
 export default function PortfolioPage() {
   return (
     <SmoothScroll>

@@ -1,0 +1,378 @@
+================================================================================
+HANDOFF DOCUMENT — PORTFOLIO SITE ("Nithin Krishna | AI Engineer")
+================================================================================
+Written: 2026-10-18
+Repo:    https://github.com/nithincodesx/PORTFOLIO.git (branch: main)
+Latest commit at time of writing: 2df9d03
+           ("Project gallery sticky stack, Lenis smooth scroll, autoplay music player")
+Local path: c:\Users\shulk\OneDrive\Documents\portfolio
+
+PURPOSE OF THIS FILE
+--------------------
+Read this first if you are the NEXT AI asked to finish this project. It lists:
+  (A) everything the site HAS today (features, architecture, files),
+  (B) everything that MUST still be implemented to call it "final", and
+  (C) the rules/invariants you must not break while doing it.
+
+--------------------------------------------------------------------------------
+0. TECH SNAPSHOT
+--------------------------------------------------------------------------------
+Stack:   Next.js 15.5.22 (App Router) · React 19 · TypeScript 5.7 ·
+         Tailwind CSS 3.4 · Framer Motion 11 · Lenis (smooth scroll) ·
+         lucide-react (icons) · Firebase 13 (Auth + Firestore, admin CMS only)
+Design:  "Obsidian Editorial" — dark theme, amber accent #F5A623,
+         Syne (headings) / Inter (body) / JetBrains Mono (labels),
+         Material Symbols Outlined (glyph icons) — fonts loaded via a Google
+         Fonts <link> inside components/3d/portfolio-3d.tsx (rendered in body).
+Scripts: npm run dev   → next dev        (http://localhost:3000)
+         npm run build → next build
+         npm run start → next start
+         npm run lint  → tsc --noEmit --incremental false  (type-check only)
+
+NOTE: README.md is STALE. It still describes an old design (Three.js 3D AI orb,
+macOS browser frame, cloud backdrop) and tells you to edit lib/portfolio-data.ts
+for content. That is all wrong now — content lives in the CMS (see section 3).
+
+--------------------------------------------------------------------------------
+1. ROUTES
+--------------------------------------------------------------------------------
+/                    app/page.tsx            → redirect() to "/3d"
+/3d                  app/3d/page.tsx         → THE ACTUAL PORTFOLIO (revalidate = 60, ISR)
+/api/contributions   app/api/contributions/route.ts → server-only GitHub contribution data
+/control             app/control/(panel)/page.tsx    → admin dashboard (force-dynamic, noindex)
+/control/login       app/control/login/page.tsx      → Firebase email/password sign-in
+/control/<slug>      app/control/(panel)/[section]/page.tsx → generic editor (registry-driven)
+/robots              app/robots.ts           → allows "/", disallows "/control"
+MISSING: sitemap.ts, favicon/app icon, opengraph image, canonical URLs.
+
+IMPORTANT QUIRK: the homepage is just a redirect to /3d. For a "final" site the
+portfolio should be served at "/" (see TODO #1).
+
+--------------------------------------------------------------------------------
+2. FULL FILE MAP (everything this site has)
+--------------------------------------------------------------------------------
+Root files
+  package.json            deps + scripts (see section 0)
+  next.config.ts          reactStrictMode; allows images.unsplash.com remote images
+  tsconfig.json           "@/*" path alias → repo root
+  tailwind.config.ts      Tailwind theme
+  postcss.config.mjs      Tailwind + autoprefixer
+  .env.example            documents every env var
+  .env.local              REAL config (gitignored) — see section 4
+  .gitignore              ignores .env* (except .env.example), node_modules, .next,
+                          *.zip, /dev*.log  → secrets/zip/logs are NOT committed
+  firestore.rules         Firestore security rules (public read, admin-only write, default-deny)
+  firebase.json           Firebase CLI config (for deploying the rules)
+  README.md               partially stale (see top note)
+  dev3000.log             local dev log — cruft, delete
+  nithin-krishna-ai-portfolio.zip  old export — cruft, delete
+
+app/ (public site)
+  app/layout.tsx          Root layout: metadata (title/OG/keywords), reads CMS server-side
+                          (getSiteConfigServer, 60s ISR cache), wraps everything in
+                          SiteConfigProvider, renders <ScrollProgress/> and <MusicPlayer/>.
+  app/globals.css         Tailwind layers + leftover CSS from the OLD design
+                          (e.g. .accordion-content, .dark-section) — mostly unused now.
+  app/page.tsx            redirect("/", → "/3d")
+  app/3d/page.tsx         The portfolio page. Server component: reads image files from
+                          /public/project-gallery at build time, exports revalidate=60,
+                          renders <SmoothScroll><EditorialPortfolio galleryImages=…/>.
+  app/robots.ts           robots rules (disallow /control)
+
+app/api/
+  contributions/route.ts  Server-only GitHub contributions endpoint.
+                          GraphQL API if GITHUB_TOKEN is set (it currently is NOT),
+                          otherwise scrapes GitHub's public contributions page.
+                          24h in-memory cache, 9s timeout, ~27 weeks (6 months) window,
+                          UTC-aligned Sunday-first grid, returns {username, generatedAt, days[]}.
+
+app/control/ (private admin CMS — never linked publicly)
+  layout.tsx              metadata robots noindex; export const dynamic="force-dynamic";
+                          wraps children in <AuthProvider>.
+  login/page.tsx          Sign-in form; if Firebase env missing → shows setup instructions.
+  (panel)/layout.tsx      Route guard: waits for auth, verifies session + admin allowlist,
+                          otherwise signs out and redirects to /control/login.
+  (panel)/page.tsx        Dashboard: live stats (sections visible, editor count…),
+                          Firestore backend health check with human-readable status labels
+                          (ok / no-document / api-disabled / denied / unreachable),
+                          grouped editor tiles (Content / Settings / Structure).
+  (panel)/[section]/page.tsx  Generic editor page: slug → registry definition → rendered
+                          automatically. Unknown slug → notFound().
+
+components/
+  scroll-progress.tsx     Framer Motion scroll progress bar (root layout).
+  music-player.tsx        Bottom in-flow player. Autoplays /music/portfolio.mp3; if browser
+                          blocks autoplay, unlocks on first click/tap/key/wheel. Controls:
+                          play/pause, volume, mute, loop. All settings from CMS
+                          (config.music). Hides itself gracefully if track missing.
+  cms/site-config-provider.tsx  App-wide CMS context:
+                          1) seeds from server-rendered config (no hydration flash),
+                          2) live onSnapshot subscription to siteConfig/main (admin saves
+                             appear instantly in open tabs),
+                          3) exposes saveSection(key, value) → partial merge write to Firestore,
+                          4) always deep-merges over DEFAULT_SITE_CONFIG (never breaks).
+  control/auth-provider.tsx     Firebase auth context. Email allowlist from
+                          NEXT_PUBLIC_ADMIN_EMAILS (comma-separated), FAIL-CLOSED (unset → nobody).
+                          This is UX gating; real enforcement is firestore.rules.
+  control/sidebar.tsx     Admin sidebar (groups + editor links + "not on site yet" badges).
+  control/field-editor.tsx      Renders one FieldDef: text/url/email/color/number/toggle/
+                          textarea/string-list/object/object-list. Exports inputCls + labelCls.
+  control/section-editor.tsx    CUSTOM editor for sections: visibility toggles, up/down
+                          reordering, save → writes config.sections (order normalized).
+  3d/smooth-scroll.tsx    <ReactLenis root> — Lenis smooth scrolling wrapper.
+  3d/portfolio-3d.tsx     ★ THE MAIN PAGE (~975 lines, client component). Contains ALL
+                          public-site CSS as an inline <style> block (CSS variables fed
+                          from CMS theme), custom cursor (cursor:none + mix-blend),
+                          hero text reveal, IntersectionObserver scroll reveals,
+                          hide-on-scroll navbar, rAF marquee, matrix-rain background,
+                          and renders sections in CMS order:
+                            hero (#home — headline, description, 2 CTA buttons, and
+                                  ContributionCalendar width-synced to the button row),
+                            marquee (6 copies of the CMS list, ✦ separators),
+                            work (#work — numbered rows: num/title/tags/year → GitHub link),
+                            gallery (ProjectGallery sticky stack, only if enabled + images),
+                            services (#services — grid of icon/title/desc cards),
+                            experience (#experience — table: period/role/company/location/
+                                        summary/stack chips),
+                            contact (#contact — mailto email, "Send a Message" mailto button,
+                                      résumé download, social links).
+                          Footer: logo NK. / copyright / credit from CMS.
+                          Nav: NK. logo + Work/Service/Experience/Contact (each link is
+                          hidden when its section is hidden in CMS) + "Available →" button.
+  3d/contribution-calendar.tsx  GitHub-style calendar in the hero. Fetches
+                          /api/contributions, caches in localStorage 24h, hover tooltip,
+                          falls back to an empty frame if unreachable.
+  3d/project-gallery.tsx   Sticky scrolling card stack (Framer Motion scale + rotating
+                          conic sheen on the active card). Returns null when 0 images.
+
+lib/
+  cms/types.ts            SiteConfig schema (see section 3) + RenderableSectionId +
+                          SectionEntry (visible/order/dividerAfter).
+  cms/defaults.ts         DEFAULT_SITE_CONFIG — the shipped content (source of truth
+                          before/without Firestore). Everything here is editable in /control.
+  cms/registry.tsx        EDITOR_SECTIONS: every admin editor (slug, icon, group, fields).
+                          Adding one entry = new /control/<slug> route + sidebar + tile.
+                          Also FieldDef types, EDITOR_GROUPS, getEditorSection(slug).
+  cms/load.ts             isFirebaseEnvConfigured(); deep mergeSiteConfig();
+                          loadSiteConfig() (client Firestore read, dynamic import);
+                          getSiteConfigServer() (server REST read of siteConfig/main,
+                          5s timeout, ISR 60s, decodes Firestore wire format);
+                          checkFirestoreBackend() (4s diagnostic for the dashboard).
+  firebase/client.ts      Firebase web init (reads NEXT_PUBLIC_* env), getFirebaseApp(),
+                          isFirebaseConfigured().
+  portfolio-data.ts       ★ DEAD CODE — old hardcoded content, no longer imported anywhere.
+  utils.ts                cn() = twMerge(clsx(...)) (utility, barely used).
+
+types/portfolio.ts        ★ DEAD CODE — types only used by lib/portfolio-data.ts.
+
+public/
+  resume.pdf              real file — linked as contact.resumeUrl ("/resume.pdf")
+  music/portfolio.mp3     real file — background track
+  project-gallery/        exactly ONE image: "IMG-20260907-WA0000.jpg.jpeg"
+                          (double extension, WhatsApp name) → gallery shows 1 card only
+  images/clouds.jpg, images/nithin.jpg  ★ UNREFERENCED leftovers from the old design
+
+--------------------------------------------------------------------------------
+3. CMS ARCHITECTURE (how content works — the core system)
+--------------------------------------------------------------------------------
+One Firestore document holds everything:  collection "siteConfig", doc id "main".
+SiteConfig top-level keys (lib/cms/types.ts):
+  hero        headline{line1,line2,line3,accent}, description, primaryCta, secondaryCta
+  about       {headline, body}            ← EDITABLE BUT NOT RENDERED ON THE SITE
+  projects    label, number, allProjectsLabel/Href, items[{num,title,tags,year,url,desc}]
+  gallery     enabled, label, title, hint
+  services    label, number, items[{icon,title,desc}]
+  experience  label, number, items[{period,role,company,location,stack,summary?}]
+  skills      items[{name,level}]         ← EDITABLE BUT NOT RENDERED ON THE SITE
+  socials     items[{label,href}]
+  contact     label, headline[], email, messageLabel, cvLabel, resumeUrl
+  content     marquee[], footer{logo,copyright,credit}
+  theme       accent, accentDim, bg, surface   (fed into CSS variables live)
+  music       enabled, src, label, defaultVolume, loop, autoplay
+  sections    SectionEntry[{id,label,visible,order,dividerAfter}] ← homepage order/visibility
+
+Data flow (three layers, always safe):
+  1) Server: app/layout.tsx → getSiteConfigServer() (Firestore REST, ISR 60s)
+     → merged over DEFAULT_SITE_CONFIG → passed as initialConfig.
+     So the SSR HTML already contains CMS content even if the browser fetch fails.
+  2) Client: SiteConfigProvider subscribes via onSnapshot → live updates.
+  3) Fallback: any failure → DEFAULT_SITE_CONFIG. The site NEVER breaks or looks
+     half-empty.
+
+Saving: each editor calls saveSection(topLevelKey, value) → setDoc(..., {merge:true}).
+Only its own key is written (partial merge — editors never clobber each other).
+
+Registered editors (lib/cms/registry.tsx):
+  Content:   hero, projects, gallery, services, experience, contact, content,
+             about [badge: "Not on site yet"], skills [badge: "Not on site yet"]
+  Settings:  theme, music
+  Structure: sections (custom visibility/order editor)
+
+Security:
+  - firestore.rules: read if true; create/update/delete only when
+    request.auth.token.email is in ['shulk6339@gmail.com']; everything else denied.
+  - NEXT_PUBLIC_ADMIN_EMAILS must stay in sync with the rules
+    (currently shulk6339@gmail.com).
+  - /control is noindex + disallowed in robots.txt; the guard still verifies a
+    real Firebase session + allowlist.
+  - GITHUB_TOKEN (if ever added) must be SERVER-ONLY — never NEXT_PUBLIC_.
+
+--------------------------------------------------------------------------------
+4. ENVIRONMENT / CONFIG STATE (as of writing)
+--------------------------------------------------------------------------------
+.env.local IS configured:
+  GITHUB_USERNAME=nithincodesx
+  NEXT_PUBLIC_FIREBASE_*        → Firebase project "portfolio-1f115" (all 6 keys + MEASUREMENT_ID)
+  NEXT_PUBLIC_ADMIN_EMAILS=shulk6339@gmail.com
+  GITHUB_TOKEN                  → NOT set (contributions use the public-page fallback)
+Whether the Firestore rules have actually been DEPLOYED to the project cannot be
+verified from code — the /control dashboard's backend health check tells you
+(Firestore → Rules must contain the firestore.rules content).
+
+On the production host (Vercel or wherever) you must set the same env vars
+(.env.local is not read in production).
+
+--------------------------------------------------------------------------------
+5. KNOWN ISSUES / INCONSISTENCIES (found while auditing the code)
+--------------------------------------------------------------------------------
+1. Homepage redirect: "/" just redirects to "/3d" — bad for SEO/link sharing.
+2. README.md is stale: describes the old Three.js orb/macOS-frame design, wrong
+   "Customize" instructions (lib/portfolio-data.ts), wrong feature list.
+3. Unused dependencies (verified: imported nowhere in source):
+   three, @react-three/fiber, @react-three/drei, gsap, @radix-ui/react-slot,
+   class-variance-authority.  (framer-motion, lenis, lucide-react, firebase, clsx,
+   tailwind-merge ARE used.)
+4. Dead code: lib/portfolio-data.ts + types/portfolio.ts (nothing imports them);
+   stale CSS in app/globals.css from the old design; unreferenced public/images/*.
+5. about + skills: fully editable in /control but never rendered (badged
+   "Not on site yet").
+6. projects.items[].desc is stored/edited but NEVER displayed anywhere (work rows
+   only show num/title/tags/year). README claims the Work list is "expandable" —
+   it is not; rows are plain GitHub links.
+7. Gallery has 1 image with an ugly WhatsApp filename ("…WA0000.jpg.jpeg").
+8. No sitemap.ts, no favicon/app icon, no opengraph-image, no canonical URLs.
+   The /3d page's metadata has no openGraph block (only the root layout does).
+9. Contact is mailto-only (no form).
+10. Google Fonts <link> is rendered inside the client component (lands in <body>,
+    not <head>) — render-blocking, not self-hosted; better as next/font.
+11. Custom cursor sets `cursor: none` globally — invisible/broken on touch devices
+    and bad for accessibility; no prefers-reduced-motion handling anywhere.
+12. next.config.ts whitelists images.unsplash.com but the code uses plain <img>
+    (no next/image anywhere).
+13. Firebase MEASUREMENT_ID is set but no Google Analytics script is wired up.
+14. Repo cruft: dev3000.log, nithin-krishna-ai-portfolio.zip (gitignored but present).
+15. No tests of any kind; `npm run lint` is only a TypeScript type-check.
+
+--------------------------------------------------------------------------------
+6. TODO — WHAT MUST BE IMPLEMENTED TO MAKE THE SITE "FINAL"
+--------------------------------------------------------------------------------
+[ P0 — MUST ]
+
+1) SERVE THE PORTFOLIO AT "/"
+   Move app/3d/page.tsx contents into app/page.tsx (keep ISR revalidate=60),
+   keep /3d as a legacy alias if desired. Remove the / → /3d redirect.
+
+2) RENDER THE `about` AND `skills` SECTIONS
+   - Add "about" | "skills" to RenderableSectionId (lib/cms/types.ts).
+   - Add SectionEntry rows in lib/cms/defaults.ts `sections` AND append missing
+     entries at runtime for old Firestore docs whose `sections` array lacks them.
+   - Render them in components/3d/portfolio-3d.tsx inside the orderedSections
+     map (same pattern: ed-container, section-label + section-big-num header,
+     scroll-fade, dividerAfter). Skills = chip grid like .exp-chip.
+   - Optionally add nav links in NAV_LINKS; remove "Not on site yet" badges in
+     lib/cms/registry.tsx.
+
+3) SHOW PROJECT DESCRIPTIONS / EXPANDABLE WORK ROWS
+   ProjectItem.desc is editable but invisible. Implement the expandable Work list
+   (click row → reveals desc) with a grid-rows/max-height transition + scroll-fade,
+   keeping the row's GitHub link behavior intact.
+
+4) SEO / BRANDING BASICS
+   - app/sitemap.ts (site routes + lastModified).
+   - Icon: app/icon.svg or icon.png ("NK." amber on #0C0C0C).
+   - opengraph-image (1200x630) + openGraph metadata on the portfolio page;
+     metadataBase + alternates.canonical in app/layout.tsx.
+   - Keep /control noindex + robots-disallowed.
+
+5) CONTACT: DECIDE + IMPLEMENT
+   (a) ship mailto as-is, or (b) add app/api/contact/route.ts using an email
+   provider API (Resend/SendGrid, server-side API key env var) with validation
+   + honeypot. Never put provider keys in NEXT_PUBLIC_.
+
+6) CONTENT ASSETS
+   - Add 4-6 real screenshots to /public/project-gallery/ with clean names
+     (e.g. coraxis-dashboard.png) — auto-detected at BUILD time, so redeploy.
+   - Rename/remove "IMG-20260907-WA0000.jpg.jpeg".
+   - Fill about + skills content; verify résumé/experience/projects truthful.
+
+7) DEPLOYMENT
+   - Push to https://github.com/nithincodesx/PORTFOLIO.git, connect Vercel,
+     set env vars there: GITHUB_USERNAME, six NEXT_PUBLIC_FIREBASE_*,
+     NEXT_PUBLIC_ADMIN_EMAILS, optional GITHUB_TOKEN (server-only).
+   - Deploy rules once: firebase login && firebase use portfolio-1f115 &&
+     firebase deploy --only firestore:rules
+   - Smoke test: / renders, /control login+save updates live site (~60s ISR,
+     instant in open tabs), /api/contributions works, music, résumé, robots.
+
+[ P1 — POLISH ]
+
+8) DELETE DEAD CODE + UNUSED DEPS
+   - Remove lib/portfolio-data.ts, types/portfolio.ts, public/images/*,
+     dev3000.log, nithin-krishna-ai-portfolio.zip; clean stale globals.css.
+   - npm uninstall three @react-three/fiber @react-three/drei gsap
+     @radix-ui/react-slot class-variance-authority (rebuild after).
+   - Rewrite README.md to match reality (this file is your source).
+
+9) ACCESSIBILITY + MOTION
+   - Custom cursor only on fine-pointer devices (matchMedia("(pointer: fine)")).
+   - @media (prefers-reduced-motion: reduce) → disable marquee/matrix/reveals/Lenis.
+   - Keyboard focus-visible styles; check contrast of --muted (45% white).
+
+10) PERFORMANCE
+   - Move fonts to next/font/google (Syne, Inter, JetBrains Mono); drop inline <link>.
+   - Optionally move portfolio-3d.tsx's giant inline <style> to a global sheet
+     (keep CMS theme values as :root CSS variables).
+   - Use next/image (or remove the unsplash remotePatterns).
+
+11) ANALYTICS DECISION
+   - Wire GA via <Script> in app/layout.tsx with the measurement id, or remove
+     MEASUREMENT_ID from env.
+
+12) RELIABILITY / DX
+   - Set GITHUB_TOKEN (server-only) if contribution scraping is flaky.
+   - CI: GitHub Action running `npm run lint && npm run build` on push.
+
+--------------------------------------------------------------------------------
+7. INVARIANTS — DO NOT BREAK THESE
+--------------------------------------------------------------------------------
+A. NEVER render raw/missing CMS values: keep merging over DEFAULT_SITE_CONFIG
+   via mergeSiteConfig (objects merge, arrays/scalars replace).
+B. New editable content = extend lib/cms/types.ts + lib/cms/defaults.ts +
+   lib/cms/registry.tsx. NEVER hand-edit content inside portfolio-3d.tsx.
+C. Editors write ONLY their own top-level key (saveSection, merge:true).
+D. Secrets stay server-side (GITHUB_TOKEN, email-provider keys). Firebase
+   NEXT_PUBLIC_* values are public by design — never real secrets there.
+E. Admin allowlist (NEXT_PUBLIC_ADMIN_EMAILS) and firestore.rules must stay in
+   sync; default-deny everything else in the database.
+F. /control stays unlinked, noindex, robots-disallowed.
+G. The public site must look identical with Firebase unconfigured/failing.
+H. Any new section must join RenderableSectionId + config.sections so the
+   structure editor stays coherent.
+I. Keep ISR: portfolio page revalidate=60; /control force-dynamic.
+
+--------------------------------------------------------------------------------
+8. VALIDATION CHECKLIST (run after any change)
+--------------------------------------------------------------------------------
+  npm install
+  npm run lint        # type-check must pass
+  npm run build       # production build must pass (bakes gallery image list)
+  npm run dev         # manual QA: / renders, nav anchors work, CMS order applied,
+                      # work rows expand, gallery stacks, contact mailto + résumé,
+                      # music unlocks on click, /control save → public tab updates.
+================================================================================
+END OF DOCUMENT
+================================================================================
+
+
+
+

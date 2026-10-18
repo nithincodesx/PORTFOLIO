@@ -55,6 +55,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const visibleSectionIds = new Set<string>(orderedSections.map((entry) => entry.id));
 
   useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+
     /* ── Custom cursor ── */
     const cursor = cursorRef.current;
     const moveCursor = (e: MouseEvent) => {
@@ -62,21 +65,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       cursor.style.left = `${e.clientX}px`;
       cursor.style.top = `${e.clientY}px`;
     };
-    window.addEventListener("mousemove", moveCursor);
+    if (finePointer) window.addEventListener("mousemove", moveCursor);
 
     const hoverables = document.querySelectorAll<HTMLElement>("a,button,[data-hover]");
     const enterHover = () => cursor?.classList.add("hovered");
     const leaveHover = () => cursor?.classList.remove("hovered");
-    hoverables.forEach((el) => {
+    if (finePointer) hoverables.forEach((el) => {
       el.addEventListener("mouseenter", enterHover);
       el.addEventListener("mouseleave", leaveHover);
     });
 
     /* ── Hero text reveal ── */
     const reveals = document.querySelectorAll<HTMLElement>(".reveal-text");
-    reveals.forEach((el, i) =>
-      setTimeout(() => el.classList.add("visible"), 120 * (i + 1))
-    );
+    reveals.forEach((el, i) => {
+      if (reduceMotion) el.classList.add("visible");
+      else setTimeout(() => el.classList.add("visible"), 120 * (i + 1));
+    });
 
     /* ── Scroll reveal ── */
     const io = new IntersectionObserver(
@@ -117,7 +121,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       }
       marqueeRaf = requestAnimationFrame(animateMarquee);
     };
-    marqueeRaf = requestAnimationFrame(animateMarquee);
+    marqueeRaf = reduceMotion ? 0 : requestAnimationFrame(animateMarquee);
 
     return () => {
       window.removeEventListener("mousemove", moveCursor);
@@ -127,7 +131,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         el.removeEventListener("mouseleave", leaveHover);
       });
       io.disconnect();
-      cancelAnimationFrame(marqueeRaf);
+      if (marqueeRaf) cancelAnimationFrame(marqueeRaf);
     };
     /* Re-runs when config resolves/changes so freshly rendered or reordered
        sections get their reveal observers and marquee track re-attached. */
@@ -158,11 +162,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <div className="editorial-root">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
-      />
-
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
