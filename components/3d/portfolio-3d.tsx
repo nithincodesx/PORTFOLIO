@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 
+import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
+import type { RenderableSectionId } from "@/lib/cms/types";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    OBSIDIAN EDITORIAL PORTFOLIO
@@ -13,95 +15,18 @@ import { ProjectGallery, type GalleryImage } from "@/components/3d/project-galle
    Accent: #F5A623 amber
 ───────────────────────────────────────────────────────────────────────────── */
 
-const PROJECTS = [
-  {
-    num: "01",
-    title: "Verified-Hybrid-Multi-Agent-RAG-System",
-    tags: ["Retrieval", "Vector DB", "Agents"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Verified-Hybrid-Multi-Agent-RAG-System-v1",
-    desc: "Hybrid BM25 + vector RAG with a verification agent that validates every claim — reducing hallucinations by 94%.",
-  },
-  {
-    num: "02",
-    title: "AI-Agile-Retrospective-Facilitator",
-    tags: ["LLM", "Workflow"],
-    year: "2025",
-    href: "https://github.com/nithincodesx/AI-Agile-Retrospective-Facilitator",
-    desc: "AI facilitator that surfaces emotional bottlenecks in Agile sprints using sentiment and commit velocity.",
-  },
-  {
-    num: "03",
-    title: "Coraxis",
-    tags: ["Autonomous Agents", "FastAPI", "Python"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Coraxis",
-    desc: "Four specialised agents research a topic end to end — decompose, search, cross-check sources, and hand back a cited report, streamed live.",
-  },
-  {
-    num: "04",
-    title: "CloudPulse-AI",
-    tags: ["Python", "Supabase", "Analytics"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/CloudPulse-AI",
-    desc: "SaaS-style infrastructure dashboard that turns real-time telemetry into server utilization and cost-saving signals.",
-  },
-  {
-    num: "05",
-    title: "Cozy-Coffee-v1",
-    tags: ["Next.js", "Supabase", "TypeScript"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Cozy-Coffee-v1",
-    desc: "A full-stack community for coffee lovers — share favourite brews, review cafes on an interactive map, and hold rich-text forum discussions.",
-  },
-];
+/* All editable content (projects, services, experience, hero, …) now lives in
+   SiteConfig — see lib/cms/defaults.ts for the shipped defaults and
+   /control to edit it. The hardcoded arrays that used to live here moved to
+   DEFAULT_SITE_CONFIG so there is a single source of truth. */
 
-const SERVICES = [
-  {
-    icon: "mic",
-    title: "Voice AI & Autonomous Agents",
-    desc: "Voice interfaces, tool-using agents, and multi-step planning loops that reason and self-verify.",
-  },
-  {
-    icon: "lan",
-    title: "RAG & Reliable Retrieval",
-    desc: "Hybrid BM25 + dense vector retrieval with an independent claim-verification agent layer.",
-  },
-  {
-    icon: "visibility",
-    title: "Computer Vision Prototypes",
-    desc: "Detection, segmentation, and OCR pipelines — shipped as clean, monitored APIs.",
-  },
-  {
-    icon: "rocket_launch",
-    title: "Full-Stack AI Products",
-    desc: "End-to-end builds: Next.js frontends, FastAPI services, Supabase, Docker, and CI/CD.",
-  },
-];
-
-const EXPERIENCE = [
-  {
-    period: "2024 â€” Present",
-    role: "AI Engineer",
-    company: "Independent Projects",
-    location: "Remote",
-    stack: ["LLMs", "LangChain", "RAG", "Python"],
-  },
-  {
-    period: "2023 â€” 2024",
-    role: "Full-Stack Developer",
-    company: "Applied AI Labs",
-    location: "Remote",
-    stack: ["Next.js", "FastAPI", "Supabase"],
-  },
-  {
-    period: "2022 â€” 2023",
-    role: "ML Builder",
-    company: "Research & Experiments",
-    location: "India",
-    stack: ["Python", "PyTorch", "OpenCV"],
-    summary: "Built and evaluated computer-vision and NLP prototypes, then translated experiments into clear, interactive demos.",
-  },
+const NAV_LINKS: { id: RenderableSectionId; label: string }[] = [
+  { id: "about", label: "About" },
+  { id: "work", label: "Work" },
+  { id: "services", label: "Service" },
+  { id: "experience", label: "Experience" },
+  { id: "skills", label: "Skills" },
+  { id: "contact", label: "Contact" },
 ];
 
 const MATRIX_COLUMNS = [
@@ -117,6 +42,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const cursorRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
+
+  /* Editable content + section visibility/order from Firebase (falls back to
+     the shipped defaults until/unless the Firestore document loads). */
+  const { config } = useSiteConfig();
+  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
+    config;
+  const [openProject, setOpenProject] = useState<string | null>(null);
+  const orderedSections = [...config.sections]
+    .sort((a, b) => a.order - b.order)
+    .filter((entry) => entry.visible);
+  const visibleSectionIds = new Set<string>(orderedSections.map((entry) => entry.id));
 
   useEffect(() => {
     /* ── Custom cursor ── */
@@ -193,7 +129,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       io.disconnect();
       cancelAnimationFrame(marqueeRaf);
     };
-  }, []);
+    /* Re-runs when config resolves/changes so freshly rendered or reordered
+       sections get their reveal observers and marquee track re-attached. */
+  }, [config]);
 
   /* ── Keep the contribution calendar aligned with the hero buttons ──
      The graph mirrors the rendered width of the "View Work" / "Get In Touch"
@@ -229,13 +167,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-          --bg:       #0C0C0C;
-          --surface:  #141414;
+          --bg:       ${theme.bg};
+          --surface:  ${theme.surface};
           --white:    #FFFFFF;
           --muted:    rgba(255,255,255,0.45);
           --border:   rgba(255,255,255,0.10);
-          --amber:    #F5A623;
-          --amber-dim:#C78419;
+          --amber:    ${theme.accent};
+          --amber-dim:${theme.accentDim};
           --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
           --ease-circ: cubic-bezier(0.85, 0, 0.15, 1);
         }
@@ -543,7 +481,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
         /* Project rows */
         .project-list { border-top: 1px solid var(--border); }
-        .project-row {
+         .project-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -554,7 +492,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           position: relative;
           overflow: hidden;
           transition: background-color 0.4s var(--ease-expo);
-          cursor: none;
+           cursor: none;
+           width: 100%;
+           text-align: left;
+           font: inherit;
+           border-left: 0;
+           border-right: 0;
+           border-top: 0;
         }
         .project-row::after {
           content: '';
@@ -568,7 +512,51 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .project-row:hover::after { width: 100%; }
         .project-row:hover .project-title { color: var(--amber); }
         .project-row:hover .project-arrow { transform: rotate(-45deg) translate(4px,-4px); }
-        .project-row:hover .project-num { color: var(--amber); }
+         .project-row:hover .project-num { color: var(--amber); }
+         .project-row[aria-expanded="true"] { background: var(--surface); }
+         .project-row[aria-expanded="true"] .project-title,
+         .project-row[aria-expanded="true"] .project-num { color: var(--amber); }
+         .project-details {
+           display: grid;
+           grid-template-rows: 0fr;
+           transition: grid-template-rows 0.45s var(--ease-expo), opacity 0.3s ease;
+           opacity: 0;
+           border-bottom: 1px solid var(--border);
+         }
+         .project-details[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+         .project-details > div { overflow: hidden; }
+         .project-description {
+           margin: -0.5rem 4.5rem 1.5rem 6rem;
+           color: var(--muted);
+           font-size: 0.9rem;
+           line-height: 1.7;
+           max-width: 48rem;
+         }
+         .project-open-link {
+           color: var(--amber);
+           font-family: 'JetBrains Mono', monospace;
+           font-size: 0.65rem;
+           letter-spacing: 0.12em;
+           text-transform: uppercase;
+           text-decoration: none;
+         }
+         .project-open-link:hover { text-decoration: underline; }
+
+         /* ── About and skills ─────────────────────────────────────── */
+         .about-section, .skills-section { padding: 6rem 0; }
+         .about-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 4rem; align-items: start; }
+         .about-headline {
+           font-family: 'Syne', sans-serif;
+           font-size: clamp(2rem, 4vw, 4rem);
+           line-height: 1;
+           letter-spacing: -0.04em;
+         }
+         .about-body { color: var(--muted); font-size: clamp(1rem, 1.6vw, 1.35rem); line-height: 1.75; max-width: 48rem; }
+         .skills-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+         .skill-chip { display: inline-flex; flex-direction: column; gap: 0.35rem; border: 1px solid var(--border); padding: 1rem 1.1rem; min-width: 9rem; transition: border-color 0.3s ease, background 0.3s ease; }
+         .skill-chip:hover { border-color: var(--amber); background: var(--surface); }
+         .skill-name { font-family: 'Syne', sans-serif; font-weight: 700; }
+         .skill-level { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
 
         .project-left { display: flex; align-items: center; gap: 2.5rem; flex: 1; }
         .project-num {
@@ -782,7 +770,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Responsive ────────────────────────────────────────────── */
-        @media (max-width: 900px) {
+         @media (max-width: 900px) {
           #main-nav { padding: 1.25rem 1.5rem; }
           .nav-links, .nav-available { display: none; }
           .ed-container { padding: 0 1.5rem; }
@@ -791,8 +779,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           .hero-buttons { justify-content: flex-start; }
           .services-grid { grid-template-columns: 1fr; }
           .ed-footer { flex-direction: column; gap: 1rem; padding: 1.5rem; text-align: center; }
-          .project-tags { display: none; }
-        }
+           .project-tags { display: none; }
+           .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+           .project-description { margin-left: 1.5rem; margin-right: 1.5rem; }
+         }
+
+         @media (pointer: coarse) { .editorial-root, .project-row, .service-card { cursor: auto; } #ed-cursor { display: none; } }
+         @media (prefers-reduced-motion: reduce) {
+           *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+           .marquee-track { transform: none !important; }
+         }
 
         /* ── Scroll bar ────────────────────────────────────────────── */
         ::-webkit-scrollbar { width: 4px; }
@@ -807,15 +803,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       <nav id="main-nav">
         <a href="#home" className="nav-logo">NK.</a>
         <div className="nav-links">
-          <a href="#work" className="nav-link">Work</a>
-          <a href="#services" className="nav-link">Service</a>
-          <a href="#experience" className="nav-link">Experience</a>
-          <a href="#contact" className="nav-link">Contact</a>
+          {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id)).map((link) => (
+            <a key={link.id} href={`#${link.id}`} className="nav-link">{link.label}</a>
+          ))}
         </div>
         <a href="#contact" className="nav-available">Available →</a>
       </nav>
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
+      {orderedSections.map((section) => (
+        <Fragment key={section.id}>
+          {/* ── Hero ─────────────────────────────────────────────────── */}
+          {section.id === "hero" && (
+            <>
       <section id="home" className="hero ed-container">
         <div className="matrix-rain" aria-hidden="true">
           {MATRIX_COLUMNS.map((column, index) => (
@@ -834,21 +833,21 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         </div>
 
         <h1 className="hero-headline">
-          <span className="line-light reveal-text">AI Engineer</span>
-          <span className="line-bold reveal-text delay-1">Building the</span>
+          <span className="line-light reveal-text">{hero.headline.line1}</span>
+          <span className="line-bold reveal-text delay-1">{hero.headline.line2}</span>
           <span className="line-bold reveal-text delay-2">
-            Future<span className="accent-dot">.</span>
+            {hero.headline.line3}<span className="accent-dot">{hero.headline.accent}</span>
           </span>
         </h1>
 
         <div className="hero-sub scroll-fade delay-3">
           <p className="hero-description">
-            I build voice AI, autonomous agents, and reliable RAG systems — bridging cutting-edge research and production-ready intelligent products.
+            {hero.description}
           </p>
           <div className="hero-actions-block">
             <div className="hero-buttons" ref={buttonsRef}>
-              <a href="#work" className="btn-solid">View Work</a>
-              <a href="#contact" className="btn-ghost">Get In Touch</a>
+              <a href={hero.primaryCta.href} className="btn-solid">{hero.primaryCta.label}</a>
+              <a href={hero.secondaryCta.href} className="btn-ghost">{hero.secondaryCta.label}</a>
             </div>
             <div className="hero-stats" ref={statsRef}>
               <ContributionCalendar />
@@ -856,83 +855,127 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           </div>
         </div>
       </section>
+            </>
+          )}
+          {section.id === "hero" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
-
-      {/* ── Marquee ──────────────────────────────────────────────── */}
+          {/* ── Marquee ──────────────────────────────────────────────── */}
+          {section.id === "marquee" && (
+            <>
       <div className="marquee-wrapper">
         <div id="marquee-track" className="marquee-track">
           {Array(6).fill(0).map((_, i) => (
             <div key={i} className="marquee-item" style={{ display: "flex", alignItems: "center", gap: "3rem" }}>
-              <span>Voice AI</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>RAG Systems</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Autonomous Agents</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Computer Vision</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Full-Stack AI</span><span style={{ color: "#F5A623" }}>✦</span>
+              {content.marquee.map((text, j) => (
+                <Fragment key={j}>
+                  {j > 0 && <span style={{ color: theme.accent }}>✦</span>}
+                  <span>{text}</span>
+                </Fragment>
+              ))}
             </div>
           ))}
         </div>
       </div>
+            </>
+          )}
 
-      {/* ── Work Section ─────────────────────────────────────────── */}
+          {/* ── About ────────────────────────────────────────────────── */}
+          {section.id === "about" && (
+            <>
+              <section id="about" className="about-section ed-container">
+                <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
+                  <p className="section-label">— About</p>
+                  <p className="section-big-num">00</p>
+                </div>
+                <div className="about-grid scroll-fade delay-1">
+                  <h2 className="about-headline">{about.headline}</h2>
+                  <p className="about-body">{about.body}</p>
+                </div>
+              </section>
+            </>
+          )}
+          {section.id === "about" && section.dividerAfter && <div className="divider" />}
+
+          {/* ── Work Section ─────────────────────────────────────────── */}
+          {section.id === "work" && (
+            <>
       <section id="work" className="work-section ed-container">
         <div className="section-header scroll-fade">
           <div>
-            <p className="section-label">— Selected Work</p>
-            <p className="section-big-num">01</p>
+            <p className="section-label">{projects.label}</p>
+            <p className="section-big-num">{projects.number}</p>
           </div>
           <a
-            href="https://github.com/nithincodesx"
+            href={projects.allProjectsHref}
             target="_blank" rel="noreferrer"
             className="btn-ghost"
             style={{ alignSelf: "flex-end" }}
           >
-            All Projects →
+            {projects.allProjectsLabel}
           </a>
         </div>
 
         <div className="project-list">
-          {PROJECTS.map((p, i) => (
-            <a
-              key={p.num}
-              href={p.href}
-              target="_blank" rel="noreferrer"
-              className={`project-row scroll-fade delay-${(i % 4) + 1}`}
-            >
-              <div className="project-left">
-                <span className="project-num">{p.num}</span>
-                <span className="project-title">{p.title}</span>
-                <div className="project-tags">
-                  {p.tags.map(t => <span key={t} className="project-tag">{t}</span>)}
+          {projects.items.map((p, i) => {
+            const isOpen = openProject === p.num;
+            return (
+              <div key={p.num} className={`project-item scroll-fade delay-${(i % 4) + 1}`}>
+                <button
+                  type="button"
+                  className="project-row"
+                  aria-expanded={isOpen}
+                  onClick={() => setOpenProject(isOpen ? null : p.num)}
+                >
+                  <div className="project-left">
+                    <span className="project-num">{p.num}</span>
+                    <span className="project-title">{p.title}</span>
+                    <div className="project-tags">
+                      {p.tags.map(t => <span key={t} className="project-tag">{t}</span>)}
+                    </div>
+                  </div>
+                  <div className="project-meta">
+                    <span className="project-year">{p.year}</span>
+                    <span className="material-symbols-outlined project-arrow" style={{ fontSize: "1.5rem" }}>{isOpen ? "remove" : "add"}</span>
+                  </div>
+                </button>
+                <div className="project-details" data-open={isOpen}>
+                  <div>
+                    <p className="project-description">{p.desc}</p>
+                    <p className="project-description" style={{ marginTop: "-0.75rem" }}>
+                      <a href={p.url} target="_blank" rel="noreferrer" className="project-open-link">Open project ↗</a>
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="project-meta">
-                <span className="project-year">{p.year}</span>
-                <span className="material-symbols-outlined project-arrow" style={{ fontSize: "1.5rem" }}>arrow_forward</span>
-              </div>
-            </a>
-          ))}
+            );
+          })}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "work" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
+          {/* ── Project Gallery (sticky image stack) ─────────────────────── */}
+          {section.id === "gallery" && gallery.enabled && (
+            <>
+      <ProjectGallery images={galleryImages} label={gallery.label} title={gallery.title} hint={gallery.hint} />
+      {section.dividerAfter && <div className="divider" />}
+            </>
+          )}
 
-      {/* ── Project Gallery (sticky image stack) ─────────────────────── */}
-      <ProjectGallery images={galleryImages} />
-
-      <div className="divider" />
-
-      {/* ── Services ─────────────────────────────────────────────── */}
+          {/* ── Services ─────────────────────────────────────────────── */}
+          {section.id === "services" && (
+            <>
       <section id="services" className="services-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
-            <p className="section-label">— What I Build</p>
-            <p className="section-big-num">02</p>
+            <p className="section-label">{services.label}</p>
+            <p className="section-big-num">{services.number}</p>
           </div>
         </div>
 
         <div className="services-grid scroll-fade delay-1">
-          {SERVICES.map((s) => (
+          {services.items.map((s) => (
             <div key={s.title} className="service-card" data-hover="">
               <span className="material-symbols-outlined service-icon">{s.icon}</span>
               <h3 className="service-title">{s.title}</h3>
@@ -942,22 +985,25 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           ))}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "services" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
-
-      {/* ── Experience ───────────────────────────────────────────── */}
+          {/* ── Experience ───────────────────────────────────────────── */}
+          {section.id === "experience" && (
+            <>
       <section id="experience" className="exp-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
-            <p className="section-label">— Journey</p>
-            <p className="section-big-num">03</p>
+            <p className="section-label">{experience.label}</p>
+            <p className="section-big-num">{experience.number}</p>
           </div>
         </div>
 
         <div className="divider" />
         <table className="exp-table scroll-fade delay-1">
           <tbody>
-            {EXPERIENCE.map((e) => (
+            {experience.items.map((e) => (
               <tr key={e.period} className="exp-row">
                 <td className="exp-cell" style={{ width: "18%" }}>
                   <span className="exp-period">{e.period}</span>
@@ -977,35 +1023,57 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           </tbody>
         </table>
       </section>
+            </>
+          )}
+          {section.id === "experience" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
+          {/* ── Skills ───────────────────────────────────────────────── */}
+          {section.id === "skills" && (
+            <>
+              <section id="skills" className="skills-section ed-container">
+                <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
+                  <p className="section-label">— Skills</p>
+                  <p className="section-big-num">04</p>
+                </div>
+                <div className="skills-grid scroll-fade delay-1">
+                  {skills.items.map((skill) => (
+                    <div key={skill.name} className="skill-chip">
+                      <span className="skill-name">{skill.name}</span>
+                      <span className="skill-level">{skill.level}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+          {section.id === "skills" && section.dividerAfter && <div className="divider" />}
 
-      {/* ── Contact ──────────────────────────────────────────────── */}
+          {/* ── Contact ──────────────────────────────────────────────── */}
+          {section.id === "contact" && (
+            <>
       <section id="contact" className="contact-section ed-container">
-        <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>— Let&apos;s Talk</p>
+        <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>{contact.label}</p>
 
         <h2 className="contact-headline scroll-fade delay-1">
-          Let&apos;s Build<br />
-          Something<br />
-          <em>Intelligent.</em>
+          {contact.headline.map((line, i) => (
+            <Fragment key={i}>
+              {i > 0 && <br />}
+              {i === contact.headline.length - 1 ? <em>{line}</em> : line}
+            </Fragment>
+          ))}
         </h2>
 
-        <a href="mailto:codesnithin@gmail.com" className="contact-email scroll-fade delay-2">
-          codesnithin@gmail.com
+        <a href={`mailto:${contact.email}`} className="contact-email scroll-fade delay-2">
+          {contact.email}
         </a>
 
         <div className="contact-actions scroll-fade delay-3">
-          <a href="mailto:codesnithin@gmail.com" className="btn-solid">Send a Message →</a>
-          <a href="/resume.pdf" target="_blank" rel="noreferrer" className="btn-ghost">Download CV ↓</a>
+          <a href={`mailto:${contact.email}`} className="btn-solid">{contact.messageLabel}</a>
+          <a href={contact.resumeUrl} target="_blank" rel="noreferrer" className="btn-ghost">{contact.cvLabel}</a>
         </div>
 
         <div className="social-row scroll-fade delay-4">
-          {[
-            { label: "GitHub", href: "https://github.com/nithincodesx" },
-            { label: "LinkedIn", href: "https://linkedin.com/in/nithincodes" },
-            { label: "Instagram", href: "https://instagram.com/nithincodez" },
-            { label: "Buy Me a Coffee", href: "https://buymeacoffee.com/nithincodes" },
-          ].map(s => (
+          {socials.items.map((s) => (
             <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="social-link">
               {s.label}
               <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>arrow_outward</span>
@@ -1013,12 +1081,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           ))}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "contact" && section.dividerAfter && <div className="divider" />}
+        </Fragment>
+      ))}
 
       {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className="ed-footer">
-        <a href="#home" className="footer-logo">NK.</a>
-        <p className="footer-copy">Nithin Krishna © 2026</p>
-        <p className="footer-copy">Design &amp; Development by NK</p>
+        <a href="#home" className="footer-logo">{content.footer.logo}</a>
+        <p className="footer-copy">{content.footer.copyright}</p>
+        <p className="footer-copy">{content.footer.credit}</p>
       </footer>
     </div>
   );
