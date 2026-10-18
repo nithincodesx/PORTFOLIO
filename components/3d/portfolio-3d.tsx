@@ -215,7 +215,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <main className="editorial-root">
-      <BootSequence duration={1250} />
+      <BootSequence duration={1800} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
