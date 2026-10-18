@@ -39,7 +39,6 @@ const MATRIX_COLUMNS = [
 ];
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
-  const rootRef = useRef<HTMLDivElement>(null);
   const cursorRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -97,48 +96,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
 
-    /* ── Scroll-linked depth + navbar ──
-       Keep all scroll work behind one RAF. The depth values stay intentionally
-       small so the page gains a sense of weight without competing with the
-       editorial layout or the sticky gallery. */
+    /* ── Navbar hide on scroll down ── */
     let lastY = 0;
-    let scrollRaf = 0;
     const nav = document.getElementById("main-nav");
-    const depthSections = reduceMotion
-      ? []
-      : Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-depth-section]") ?? []);
-    const updateScrollEffects = () => {
-      scrollRaf = 0;
+    const handleScroll = () => {
       const y = window.scrollY;
       if (nav) {
         nav.style.transform = y > lastY && y > 80 ? "translateY(-100%)" : "translateY(0)";
       }
       lastY = y;
-
-      if (!reduceMotion) {
-        const viewportCenter = window.innerHeight * 0.5;
-        depthSections.forEach((section) => {
-          const rect = section.getBoundingClientRect();
-          const sectionCenter = rect.top + rect.height * 0.5;
-          const distance = Math.max(-1, Math.min(1,
-            (sectionCenter - viewportCenter) / (window.innerHeight * 0.9 + rect.height * 0.5),
-          ));
-          const lift = distance * -10;
-          const scale = 1 - Math.abs(distance) * 0.012;
-          const opacity = 0.92 + (1 - Math.abs(distance)) * 0.08;
-          const blur = Math.abs(distance) * 0.35;
-          section.style.setProperty("--depth-y", `${lift.toFixed(2)}px`);
-          section.style.setProperty("--depth-scale", scale.toFixed(4));
-          section.style.setProperty("--depth-opacity", opacity.toFixed(3));
-          section.style.setProperty("--depth-blur", `${blur.toFixed(2)}px`);
-        });
-      }
-    };
-    const handleScroll = () => {
-      if (!scrollRaf) scrollRaf = requestAnimationFrame(updateScrollEffects);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
 
     /* ── Marquee scroll speed ── */
     const marqueeTrack = document.getElementById("marquee-track");
@@ -158,7 +126,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     return () => {
       window.removeEventListener("mousemove", moveCursor);
       window.removeEventListener("scroll", handleScroll);
-      if (scrollRaf) cancelAnimationFrame(scrollRaf);
       hoverables.forEach((el) => {
         el.removeEventListener("mouseenter", enterHover);
         el.removeEventListener("mouseleave", leaveHover);
@@ -194,7 +161,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
      and caches it for 24h. ── */
 
   return (
-    <div className="editorial-root" ref={rootRef}>
+    <div className="editorial-root">
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -404,21 +371,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .delay-2 { transition-delay: 200ms; }
         .delay-3 { transition-delay: 320ms; }
         .delay-4 { transition-delay: 440ms; }
-
-        /* A restrained layer of depth for the major editorial beats. Values
-           are written by the single RAF scroll pass above, keeping this
-           purely presentational and safe to omit for reduced motion. */
-        [data-depth-section] {
-          --depth-y: 0px;
-          --depth-scale: 1;
-          --depth-opacity: 1;
-          --depth-blur: 0px;
-          transform: translate3d(0, var(--depth-y), 0) scale(var(--depth-scale));
-          opacity: var(--depth-opacity);
-          filter: blur(var(--depth-blur));
-          transform-origin: center center;
-          will-change: transform, opacity, filter;
-        }
 
         .hero-sub {
           display: grid;
@@ -862,7 +814,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Hero ─────────────────────────────────────────────────── */}
           {section.id === "hero" && (
             <>
-      <section id="home" className="hero ed-container" data-depth-section>
+      <section id="home" className="hero ed-container">
         <div className="matrix-rain" aria-hidden="true">
           {MATRIX_COLUMNS.map((column, index) => (
             <span
@@ -929,7 +881,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── About ────────────────────────────────────────────────── */}
           {section.id === "about" && (
             <>
-              <section id="about" className="about-section ed-container" data-depth-section>
+              <section id="about" className="about-section ed-container">
                 <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
                   <p className="section-label">— About</p>
                   <p className="section-big-num">00</p>
@@ -946,7 +898,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Work Section ─────────────────────────────────────────── */}
           {section.id === "work" && (
             <>
-      <section id="work" className="work-section ed-container" data-depth-section>
+      <section id="work" className="work-section ed-container">
         <div className="section-header scroll-fade">
           <div>
             <p className="section-label">{projects.label}</p>
@@ -1013,7 +965,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Services ─────────────────────────────────────────────── */}
           {section.id === "services" && (
             <>
-      <section id="services" className="services-section ed-container" data-depth-section>
+      <section id="services" className="services-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
             <p className="section-label">{services.label}</p>
@@ -1039,7 +991,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Experience ───────────────────────────────────────────── */}
           {section.id === "experience" && (
             <>
-      <section id="experience" className="exp-section ed-container" data-depth-section>
+      <section id="experience" className="exp-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
             <p className="section-label">{experience.label}</p>
@@ -1077,7 +1029,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Skills ───────────────────────────────────────────────── */}
           {section.id === "skills" && (
             <>
-              <section id="skills" className="skills-section ed-container" data-depth-section>
+              <section id="skills" className="skills-section ed-container">
                 <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
                   <p className="section-label">— Skills</p>
                   <p className="section-big-num">04</p>
@@ -1098,7 +1050,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Contact ──────────────────────────────────────────────── */}
           {section.id === "contact" && (
             <>
-      <section id="contact" className="contact-section ed-container" data-depth-section>
+      <section id="contact" className="contact-section ed-container">
         <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>{contact.label}</p>
 
         <h2 className="contact-headline scroll-fade delay-1">
