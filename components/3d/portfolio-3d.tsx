@@ -5,6 +5,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, typ
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
+import { BootSequence } from "@/components/motion/boot-sequence";
 import { ChapterIndicator } from "@/components/motion/chapter-indicator";
 import { MagneticButton } from "@/components/motion/magnetic-button";
 import type { RenderableSectionId } from "@/lib/cms/types";
@@ -55,6 +56,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const [openProject, setOpenProject] = useState<string | null>(null);
   const [activeChapter, setActiveChapter] = useState<string | null>("home");
   const [previewProject, setPreviewProject] = useState<(typeof projects.items)[number] | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const orderedSections = [...config.sections]
     .sort((a, b) => a.order - b.order)
     .filter((entry) => entry.visible);
@@ -167,6 +169,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
        sections get their reveal observers and marquee track re-attached. */
   }, [chapterItems, config]);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
+
   /* ── Keep the contribution calendar aligned with the hero buttons ──
      The graph mirrors the rendered width of the "View Work" / "Get In Touch"
      row so both share identical left/right edges at every viewport. ── */
@@ -206,6 +215,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <main className="editorial-root">
+      <BootSequence duration={1250} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -303,6 +313,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           transition: opacity 0.3s;
         }
          .nav-available:hover { opacity: 0.7; }
+         .mobile-menu-toggle { display: none; }
+         .mobile-menu { display: none; }
          .nav-link:focus-visible, .nav-available:focus-visible, .nav-logo:focus-visible,
          .btn-solid:focus-visible, .btn-ghost:focus-visible, .social-link:focus-visible,
          .footer-logo:focus-visible, .project-open-link:focus-visible {
@@ -338,10 +350,12 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
         /* ── Hero ──────────────────────────────────────────────────── */
          .hero {
-          min-height: 100vh;
-          display: flex; flex-direction: column; justify-content: flex-end;
-          padding-top: 9rem;
-          padding-bottom: 4rem;
+           min-height: 100vh;
+           display: flex; flex-direction: column; justify-content: flex-end;
+           padding-top: 9rem;
+           padding-left: 4rem;
+           padding-right: 4rem;
+           padding-bottom: 4rem;
           position: relative;
           isolation: isolate;
            overflow: hidden;
@@ -443,17 +457,30 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          .reveal-text.visible { opacity: 1; transform: translateY(0); }
 
         /* Scroll fade */
-        .scroll-fade {
-          opacity: 0;
-          transform: translateY(36px);
-          transition: opacity 0.9s var(--ease-expo), transform 0.9s var(--ease-expo);
-        }
-         .scroll-fade.visible { opacity: 1; transform: translateY(0); }
+         .scroll-fade {
+           opacity: 0;
+           transform: translateY(36px);
+           clip-path: inset(0 0 18px 0);
+           transition: opacity 0.9s var(--ease-expo), transform 0.9s var(--ease-expo), clip-path 0.9s var(--ease-expo);
+         }
+         .scroll-fade.visible { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
          .project-item.scroll-fade { transition-delay: 0ms; }
          .delay-1 { transition-delay: 100ms; }
         .delay-2 { transition-delay: 200ms; }
         .delay-3 { transition-delay: 320ms; }
          .delay-4 { transition-delay: 440ms; }
+         .section-header { position: relative; }
+         .section-header::after {
+           position: absolute;
+           left: 0;
+           bottom: -1rem;
+           width: 0;
+           height: 1px;
+           background: var(--amber);
+           content: '';
+           transition: width 1s var(--ease-expo);
+         }
+         .section-header.visible::after { width: min(8rem, 22vw); }
          .hero-signal {
            position: absolute;
            top: 7.5rem;
@@ -566,7 +593,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .marquee-item span { color: var(--amber); margin: 0 1rem; }
 
         /* ── Work section ──────────────────────────────────────────── */
-        .work-section { padding: 6rem 0; }
+         .work-section { padding: 6rem 4rem; }
         .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3rem; }
         .section-big-num {
           font-family: 'Syne', sans-serif;
@@ -662,7 +689,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          .project-preview-title { display: block; margin-top: 0.35rem; color: var(--white); font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; line-height: 1.1; }
 
          /* ── About and skills ─────────────────────────────────────── */
-         .about-section, .skills-section { padding: 6rem 0; }
+         .about-section, .skills-section { padding: 6rem 4rem; }
          .about-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 4rem; align-items: start; }
          .about-headline {
            font-family: 'Syne', sans-serif;
@@ -720,7 +747,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Services grid ─────────────────────────────────────────── */
-        .services-section { padding: 6rem 0; }
+         .services-section { padding: 6rem 4rem; }
         .services-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
@@ -770,7 +797,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Experience ────────────────────────────────────────────── */
-        .exp-section { padding: 6rem 0; }
+         .exp-section { padding: 6rem 4rem; }
         .exp-table { width: 100%; border-collapse: collapse; }
         .exp-row {
           border-bottom: 1px solid var(--border);
@@ -821,7 +848,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .exp-row:hover .exp-chip { border-color: var(--amber); color: var(--amber); }
 
         /* ── Contact ───────────────────────────────────────────────── */
-        .contact-section { padding: 6rem 0 8rem; }
+         .contact-section { padding: 6rem 4rem 8rem; }
         .contact-headline {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
@@ -894,8 +921,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         /* ── Responsive ────────────────────────────────────────────── */
          @media (max-width: 900px) {
           #main-nav { padding: 1.25rem 1.5rem; }
-          .nav-links, .nav-available { display: none; }
-          .ed-container { padding: 0 1.5rem; }
+           .nav-links, .nav-available { display: none; }
+           .mobile-menu-toggle { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0; border: 0; background: transparent; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
+           .mobile-menu-toggle::before { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); content: ''; }
+           .mobile-menu { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.25rem; padding: 7rem 1.5rem 2rem; background: rgba(12,12,12,0.97); }
+           .mobile-menu::before { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 4rem 4rem; content: ''; opacity: 0.6; pointer-events: none; }
+           .mobile-menu-link { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border); color: var(--white); font-family: 'Syne', sans-serif; font-size: clamp(2rem, 10vw, 3.5rem); font-weight: 700; letter-spacing: -0.05em; text-decoration: none; }
+           .mobile-menu-link span { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; }
+           .mobile-menu-meta { position: relative; z-index: 1; margin-top: auto; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; }
+           .ed-container,
+           .hero,
+           .work-section,
+           .about-section,
+           .services-section,
+           .exp-section,
+           .skills-section,
+           .contact-section { padding-left: 1.5rem; padding-right: 1.5rem; }
           .hero-sub { grid-template-columns: 1fr; }
           .hero-actions-block { align-items: flex-start; }
           .hero-buttons { justify-content: flex-start; }
@@ -906,6 +947,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            .project-description { margin-left: 1.5rem; margin-right: 1.5rem; }
            .hero-signal { left: 1.5rem; }
            .hero::after { right: -18rem; top: 20%; }
+           .hero-headline { font-size: clamp(2.55rem, 11.5vw, 4.8rem); letter-spacing: -0.07em; line-height: 0.86; overflow-wrap: normal; }
+           .hero { min-height: auto; padding-top: 9.5rem; padding-bottom: 3rem; }
+           .hero-signal { top: 7.4rem; }
+           .hero-description { font-size: 1rem; }
+           .hero-actions-block { gap: 1.4rem; }
+           .hero-buttons { width: 100%; }
+           .hero-buttons .btn-solid, .hero-buttons .btn-ghost { flex: 1; padding-left: 0.75rem; padding-right: 0.75rem; text-align: center; }
+           .hero-stats { width: 100% !important; overflow-x: auto; }
+           .section-header { margin-bottom: 2.2rem !important; }
+           .section-big-num { font-size: clamp(2.7rem, 14vw, 4rem); }
          }
          @media (max-height: 700px) and (min-width: 901px) {
            .hero { padding-top: 7rem; padding-bottom: 2.5rem; }
@@ -922,6 +973,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            .marquee-track { transform: none !important; }
            .hero::after, .hero-signal::before, .project-preview-frame::after { animation: none; }
            .reveal-text { animation: none; }
+           .mobile-menu { animation: none; }
          }
 
         /* ── Scroll bar ────────────────────────────────────────────── */
@@ -935,14 +987,41 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
       {/* ── Navbar ───────────────────────────────────────────────── */}
        <nav id="main-nav">
-        <a href="#home" className="nav-logo">NK.</a>
-        <div className="nav-links">
+         <a href="#home" className="nav-logo">NK.</a>
+         <div className="nav-links">
           {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id)).map((link) => (
             <a key={link.id} href={`#${link.id}`} className="nav-link">{link.label}</a>
           ))}
-        </div>
+         </div>
          <a href="#contact" className="nav-available">Available →</a>
+         <button
+           type="button"
+           className="mobile-menu-toggle"
+           aria-expanded={mobileMenuOpen}
+           aria-controls="mobile-menu"
+           onClick={() => setMobileMenuOpen((open) => !open)}
+         >
+           {mobileMenuOpen ? "Close" : "Menu"}
+         </button>
        </nav>
+       {mobileMenuOpen && (
+         <div id="mobile-menu" className="mobile-menu">
+           {chapterItems
+             .filter(({ id }) => id !== "home")
+             .map((item, index) => (
+               <a
+                 key={item.id}
+                 href={`#${item.id}`}
+                 className="mobile-menu-link"
+                 onClick={() => setMobileMenuOpen(false)}
+               >
+                 {item.label}
+                 <span>{String(index + 1).padStart(2, "0")}</span>
+               </a>
+             ))}
+           <p className="mobile-menu-meta">AI systems / voice / retrieval / agents</p>
+         </div>
+       )}
        <ChapterIndicator items={chapterItems} activeId={activeChapter} />
 
       {orderedSections.map((section) => (
@@ -1114,8 +1193,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         </div>
 
         <div className="services-grid scroll-fade delay-1">
-          {services.items.map((s) => (
-            <div key={s.title} className="service-card" data-hover="">
+           {services.items.map((s, index) => (
+             <div key={s.title} className="service-card scroll-fade" data-hover="" style={{ transitionDelay: `${index * 90}ms` }}>
               <span className="material-symbols-outlined service-icon">{s.icon}</span>
               <h3 className="service-title">{s.title}</h3>
               <p className="service-desc">{s.desc}</p>
@@ -1142,8 +1221,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         <div className="divider" />
         <table className="exp-table scroll-fade delay-1">
           <tbody>
-            {experience.items.map((e) => (
-              <tr key={e.period} className="exp-row">
+             {experience.items.map((e, index) => (
+               <tr key={e.period} className="exp-row scroll-fade" style={{ transitionDelay: `${index * 90}ms` }}>
                 <td className="exp-cell" style={{ width: "18%" }}>
                   <span className="exp-period">{e.period}</span>
                 </td>
@@ -1175,8 +1254,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
                   <p className="section-big-num">04</p>
                 </div>
                 <div className="skills-grid scroll-fade delay-1">
-                  {skills.items.map((skill) => (
-                    <div key={skill.name} className="skill-chip">
+                  {skills.items.map((skill, index) => (
+                    <div key={skill.name} className="skill-chip scroll-fade" style={{ transitionDelay: `${index * 70}ms` }}>
                       <span className="skill-name">{skill.name}</span>
                       <span className="skill-level">{skill.level}</span>
                     </div>
