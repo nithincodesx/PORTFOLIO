@@ -43,6 +43,7 @@ const MATRIX_COLUMNS = [
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
   const projectPreviewRef = useRef<HTMLDivElement>(null);
+  const previewPositionRef = useRef({ x: 32, y: 32 });
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -188,16 +189,23 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const handleProjectPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
     const preview = projectPreviewRef.current;
     if (!preview || event.pointerType === "touch") return;
-    preview.style.setProperty("--preview-x", `${event.clientX + 26}px`);
-    preview.style.setProperty("--preview-y", `${event.clientY + 26}px`);
+    previewPositionRef.current = { x: event.clientX + 26, y: event.clientY + 26 };
+    preview.style.setProperty("--preview-x", `${previewPositionRef.current.x}px`);
+    preview.style.setProperty("--preview-y", `${previewPositionRef.current.y}px`);
   };
+
+  useEffect(() => {
+    if (!previewProject || !projectPreviewRef.current) return;
+    projectPreviewRef.current.style.setProperty("--preview-x", `${previewPositionRef.current.x}px`);
+    projectPreviewRef.current.style.setProperty("--preview-y", `${previewPositionRef.current.y}px`);
+  }, [previewProject]);
 
   /* ── GitHub contribution calendar is rendered inside the hero (see
      <ContributionCalendar /> below) — it loads its own real contribution data
      and caches it for 24h. ── */
 
   return (
-    <div className="editorial-root">
+    <main className="editorial-root">
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -205,7 +213,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           --bg:       ${theme.bg};
           --surface:  ${theme.surface};
           --white:    #FFFFFF;
-          --muted:    rgba(255,255,255,0.45);
+          --muted:    rgba(255,255,255,0.56);
           --border:   rgba(255,255,255,0.10);
           --amber:    ${theme.accent};
           --amber-dim:${theme.accentDim};
@@ -214,15 +222,15 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Body ──────────────────────────────────────────────────── */
-        .editorial-root {
+         .editorial-root {
           background: var(--bg);
           color: var(--white);
           font-family: 'Inter', sans-serif;
           min-height: 100vh;
           /* overflow-x: clip (not hidden) so position: sticky works in descendants */
           overflow-x: clip;
-          cursor: none;
-        }
+           cursor: none;
+         }
 
         /* ── Custom cursor ─────────────────────────────────────────── */
         #ed-cursor {
@@ -270,7 +278,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-weight: 500;
           letter-spacing: 0.15em;
           text-transform: uppercase;
-          color: var(--muted);
+          color: rgba(255,255,255,0.58);
           text-decoration: none;
           transition: color 0.3s ease;
           position: relative;
@@ -303,11 +311,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          }
 
         /* ── Section wrapper ───────────────────────────────────────── */
-        .ed-container {
-          max-width: 1440px;
-          margin: 0 auto;
-          padding: 0 4rem;
-        }
+         .ed-container {
+           max-width: 1440px;
+           margin: 0 auto;
+           padding: 0 4rem;
+         }
+         @media (min-width: 1100px) {
+           .editorial-root { padding-right: clamp(5rem, 8vw, 9rem); }
+         }
         .divider {
           height: 1px;
           background: var(--border);
@@ -405,7 +416,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-weight: 800;
           line-height: 0.9;
           letter-spacing: -0.04em;
-          font-size: clamp(4rem, 11vw, 10rem);
+           font-size: clamp(3.75rem, 10vw, 9.5rem);
           text-transform: uppercase;
           margin-bottom: 3rem;
           position: relative;
@@ -437,8 +448,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           transform: translateY(36px);
           transition: opacity 0.9s var(--ease-expo), transform 0.9s var(--ease-expo);
         }
-        .scroll-fade.visible { opacity: 1; transform: translateY(0); }
-        .delay-1 { transition-delay: 100ms; }
+         .scroll-fade.visible { opacity: 1; transform: translateY(0); }
+         .project-item.scroll-fade { transition-delay: 0ms; }
+         .delay-1 { transition-delay: 100ms; }
         .delay-2 { transition-delay: 200ms; }
         .delay-3 { transition-delay: 320ms; }
          .delay-4 { transition-delay: 440ms; }
@@ -458,22 +470,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          }
          .hero-signal::before { content: ''; width: 0.45rem; height: 0.45rem; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); animation: signal-pulse 2.4s ease-in-out infinite; }
          @keyframes signal-pulse { 50% { box-shadow: 0 0 0 0.55rem rgba(245,166,35,0); } }
-         .scroll-cue {
-           position: absolute;
-           bottom: 4.2rem;
-           right: 4rem;
-           display: flex;
-           align-items: center;
-           gap: 0.6rem;
-           color: var(--muted);
-           font-family: 'JetBrains Mono', monospace;
-           font-size: 0.58rem;
-           letter-spacing: 0.16em;
-           text-transform: uppercase;
-           writing-mode: vertical-rl;
-         }
-         .scroll-cue::after { content: ''; width: 1px; height: 3rem; background: linear-gradient(var(--amber), transparent); animation: cue-line 1.8s ease-in-out infinite; }
-         @keyframes cue-line { 50% { transform: scaleY(0.55); transform-origin: top; opacity: 0.45; } }
 
         .hero-sub {
           display: grid;
@@ -651,11 +647,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            width: min(22rem, 34vw);
            pointer-events: none;
            opacity: 0;
-           transform: translate3d(var(--preview-x, -50%), var(--preview-y, -50%), 0) rotate(3deg) scale(0.92);
+           transform: translate3d(var(--preview-x, 2rem), var(--preview-y, 2rem), 0) rotate(3deg) scale(0.92);
            transform-origin: center;
            transition: opacity 220ms ease, transform 320ms var(--ease-expo);
          }
-         .project-preview[data-visible="true"] { opacity: 1; transform: translate3d(var(--preview-x, -50%), var(--preview-y, -50%), 0) rotate(-3deg) scale(1); }
+         .project-preview[data-visible="true"] { opacity: 1; transform: translate3d(var(--preview-x, 2rem), var(--preview-y, 2rem), 0) rotate(-3deg) scale(1); }
          .project-preview-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border: 1px solid rgba(245,166,35,0.5); background: var(--surface); box-shadow: 1rem 1rem 0 rgba(245,166,35,0.08), 0 1.5rem 3rem rgba(0,0,0,0.45); }
          .project-preview-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(130deg, transparent 35%, rgba(245,166,35,0.2), transparent 65%); transform: translateX(-100%); animation: preview-scan 2.4s ease-in-out infinite; }
          @keyframes preview-scan { 55%, 100% { transform: translateX(100%); } }
@@ -888,11 +884,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           color: var(--white);
           text-decoration: none;
         }
-        .footer-copy {
+         .footer-copy {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.65rem;
           letter-spacing: 0.1em;
-          color: var(--muted);
+           color: rgba(255,255,255,0.58);
         }
 
         /* ── Responsive ────────────────────────────────────────────── */
@@ -909,15 +905,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            .about-grid { grid-template-columns: 1fr; gap: 2rem; }
            .project-description { margin-left: 1.5rem; margin-right: 1.5rem; }
            .hero-signal { left: 1.5rem; }
-           .scroll-cue { right: 1.5rem; bottom: 2rem; }
            .hero::after { right: -18rem; top: 20%; }
+         }
+         @media (max-height: 700px) and (min-width: 901px) {
+           .hero { padding-top: 7rem; padding-bottom: 2.5rem; }
+           .hero-headline { margin-bottom: 1.5rem; font-size: clamp(3.25rem, 9vw, 7rem); }
+           .hero-signal { top: 5.5rem; }
+         }
+         @media (min-width: 901px) and (max-width: 1400px) {
+           .hero-headline { font-size: clamp(3.75rem, 10vw, 8rem); }
          }
 
          @media (pointer: coarse) { .editorial-root, .project-row, .service-card { cursor: auto; } #ed-cursor { display: none; } }
          @media (prefers-reduced-motion: reduce) {
            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
            .marquee-track { transform: none !important; }
-           .hero::after, .hero-signal::before, .scroll-cue::after, .project-preview-frame::after { animation: none; }
+           .hero::after, .hero-signal::before, .project-preview-frame::after { animation: none; }
            .reveal-text { animation: none; }
          }
 
@@ -987,7 +990,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
             </div>
           </div>
         </div>
-        <div className="scroll-cue" aria-hidden="true">Scroll to explore</div>
       </section>
             </>
           )}
@@ -1002,7 +1004,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
             <div key={i} className="marquee-item" style={{ display: "flex", alignItems: "center", gap: "3rem" }}>
               {content.marquee.map((text, j) => (
                 <Fragment key={j}>
-                  {j > 0 && <span style={{ color: theme.accent }}>✦</span>}
+                   {j > 0 && <span aria-hidden="true" style={{ color: theme.accent }}>✦</span>}
                   <span>{text}</span>
                 </Fragment>
               ))}
@@ -1253,6 +1255,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

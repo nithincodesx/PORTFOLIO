@@ -36,7 +36,7 @@ export function ChapterIndicator({ items, activeId, onSelect }: ChapterIndicator
 
         .chapter-indicator__caption {
           padding-right: 0.9rem;
-          color: rgba(255, 255, 255, 0.3);
+           color: rgba(255, 255, 255, 0.55);
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.56rem;
           letter-spacing: 0.18em;

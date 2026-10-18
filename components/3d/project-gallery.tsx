@@ -71,7 +71,7 @@ export function ProjectGallery({
         @keyframes pg-spin { to { --pg-angle: 360deg; } }
         .pg-imgwrap { position: absolute; inset: 10px; border-radius: calc(1.5rem - 10px); overflow: hidden; background: #0a0a0c; }
         .pg-imgwrap img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; pointer-events: none; }
-        .pg-count { position: absolute; left: 1.25rem; bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--white); background: rgba(12,12,12,0.65); border: 1px solid rgba(255,255,255,0.16); padding: 0.35rem 0.7rem; border-radius: 999px; }
+         .pg-count { position: absolute; left: 1.25rem; bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--white); background: rgba(12,12,12,0.92); border: 1px solid rgba(255,255,255,0.22); padding: 0.35rem 0.7rem; border-radius: 999px; }
         @media (max-width: 640px) { .pg-card { width: calc(100vw - 1.5rem); max-height: 74svh; border-radius: 1.1rem; padding: 8px; } .pg-imgwrap { inset: 8px; border-radius: calc(1.1rem - 8px); } }
         @media (prefers-reduced-motion: reduce) { .pg-card.is-active .pg-sheen { animation: none; opacity: 0.35; } }
       `}</style>

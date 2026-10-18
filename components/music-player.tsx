@@ -98,7 +98,7 @@ export function MusicPlayer() {
   if (pathname.startsWith("/control") || !music.enabled || unavailable) return null;
 
   return (
-    <div className={`mp-wrap${playing ? " is-playing" : ""}`}>
+    <aside className={`mp-wrap${playing ? " is-playing" : ""}`} aria-label="Ambient music player">
       <style>{`
   .mp-wrap { border-top: 1px solid rgba(255,255,255,0.08); background: #0C0C0C; }
   .mp-bar { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 2rem; }
@@ -114,7 +114,7 @@ export function MusicPlayer() {
   .mp-eq i { width: 2px; height: 3px; border-radius: 1px; background: rgba(255,255,255,0.3); }
   .is-playing .mp-eq i { background: ${config.theme.accent}; animation: mp-eq 1.05s ease-in-out infinite; }
   @keyframes mp-eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
-  .mp-label { font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.42); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
+  .mp-label { font-size: 0.58rem; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: auto; }
   .is-playing .mp-label { color: ${config.theme.accent}; }
   .mp-divider { width: 1px; height: 14px; background: rgba(255,255,255,0.10); flex: 0 0 1px; }
   .mp-range { -webkit-appearance: none; appearance: none; width: 72px; height: 2px; border: 0; border-radius: 2px; background: rgba(255,255,255,0.18); cursor: pointer; }
@@ -138,6 +138,6 @@ export function MusicPlayer() {
           <Repeat size={13} />
         </button>
       </div>
-    </div>
+    </aside>
   );
 }
