@@ -28,10 +28,28 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     try {
+      /* Muted playback is never blocked — this is what lets music start
+         together with the loader even before any user gesture. */
+      const wasMuted = audio.muted;
+      audio.muted = true;
       await audio.play();
+      audio.muted = wasMuted;
       setPlaying(true);
     } catch {
       /* Still blocked — stays paused until a gesture unlocks it. */
+    }
+  }, []);
+
+  const startAudible = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    try {
+      audio.muted = false;
+      setMuted(false);
+      await audio.play();
+      setPlaying(true);
+    } catch {
+      /* blocked — unlock listeners will retry on next gesture */
     }
   }, []);
 
