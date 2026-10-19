@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   motion,
   useMotionValue,
@@ -49,12 +49,34 @@ const MATRIX_COLUMNS = [
   "110 NITHIN 010 NITHIN",
 ];
 
+/** Convert a hex color (#RGB or #RRGGBB) to rgba() with the given alpha. */
+function hexRgba(hex: string, alpha: number): string {
+  const raw = hex.replace("#", "").trim();
+  const full =
+    raw.length === 3
+      ? raw
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : raw.slice(0, 6);
+  const n = parseInt(full, 16);
+  if (Number.isNaN(n)) return `rgba(0,0,0,${alpha})`;
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
 
   /* While the fullscreen words intro plays, keep the nav + custom cursor
      hidden so only the loader words are visible. They fade in with the wipe. */
   const [introDone, setIntroDone] = useState(false);
+
+  /* Stable callback for the loader: reveal the hero copy once the words
+     intro has finished its exit wipe. */
+  const handleIntroDone = useCallback(() => setIntroDone(true), []);
 
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -82,10 +104,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   /* Editable content + section visibility/order from Firebase (falls back to
      the shipped defaults until/unless the Firestore document loads). */
   const { config } = useSiteConfig();
-  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
+  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme, preloader, heroGlow } =
     config;
   const [openProject, setOpenProject] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  /* When the preloader is disabled in the CMS, skip the intro entirely and
+     reveal the hero copy immediately. */
+  useEffect(() => {
+    if (!preloader.enabled) setIntroDone(true);
+  }, [preloader.enabled]);
   const orderedSections = [...config.sections]
     .sort((a, b) => a.order - b.order)
     .filter((entry) => entry.visible);
@@ -220,10 +248,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <main className="editorial-root">
-      <WordsPreloader
-        duration={6500}
-        words={["ഹലോ", "HELLO", "NAMASKARAM", "AI ENGINEER", "LANDING PAGE", "NK."]}
-      />
+      {preloader.enabled && (
+        <WordsPreloader
+          duration={preloader.duration}
+          words={preloader.words}
+          fullscreen
+          onComplete={handleIntroDone}
+        />
+      )}
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -398,22 +430,23 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            so shades spread past the container to the true page borders.
            Left = green, right = gold. Inside stays pure dark. */
         .viewport-edge {
-          position: fixed; top: 0; bottom: 0; width: min(22vw, 340px);
+          position: fixed; top: 0; bottom: 0; width: ${heroGlow.width};
           pointer-events: none; z-index: 1;
+          display: ${heroGlow.enabled ? "block" : "none"};
         }
         .viewport-edge-left {
           left: 0;
           background:
-            radial-gradient(130% 34% at 0% 12%, rgba(91,255,143,0.13), transparent 65%),
-            radial-gradient(130% 34% at 0% 88%, rgba(91,255,143,0.10), transparent 65%),
-            linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
+            radial-gradient(130% 34% at 0% 12%, ${hexRgba(heroGlow.leftColor, 0.13)}, transparent 65%),
+            radial-gradient(130% 34% at 0% 88%, ${hexRgba(heroGlow.leftColor, 0.10)}, transparent 65%),
+            linear-gradient(90deg, ${hexRgba(heroGlow.leftColor, 0.05)}, transparent);
         }
         .viewport-edge-right {
           right: 0;
           background:
-            radial-gradient(130% 34% at 100% 12%, rgba(245,166,35,0.15), transparent 65%),
-            radial-gradient(130% 34% at 100% 88%, rgba(245,166,35,0.11), transparent 65%),
-            linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
+            radial-gradient(130% 34% at 100% 12%, ${hexRgba(heroGlow.rightColor, 0.15)}, transparent 65%),
+            radial-gradient(130% 34% at 100% 88%, ${hexRgba(heroGlow.rightColor, 0.11)}, transparent 65%),
+            linear-gradient(270deg, ${hexRgba(heroGlow.rightColor, 0.05)}, transparent);
         }
         @keyframes hero-orbit { to { transform: rotate(360deg); } }
         .matrix-rain {

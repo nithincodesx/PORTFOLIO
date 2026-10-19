@@ -198,6 +198,20 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     loop: true,
     autoplay: true,
   },
+  preloader: {
+    words: [
+      "ഹലോ", "Hello", "bonjour", "നമസ്കാരം", "Ciao", "Olà",
+      "സ്വাগതം", ">", "Hallå", "Guten tag", "നന്ദി", "NK.",
+    ],
+    duration: 6500,
+    enabled: true,
+  },
+  heroGlow: {
+    enabled: true,
+    leftColor: "#5BFF8F",
+    rightColor: "#F5A623",
+    width: "min(22vw, 340px)",
+  },
 
   sections: [
     { id: "hero", label: "Hero", visible: true, order: 0, dividerAfter: true },

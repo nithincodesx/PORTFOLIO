@@ -97,6 +97,17 @@ export type SiteConfig = {
     loop: boolean;
     autoplay: boolean;
   };
+  preloader: {
+    words: string[];
+    duration: number;
+    enabled: boolean;
+  };
+  heroGlow: {
+    enabled: boolean;
+    leftColor: string;
+    rightColor: string;
+    width: string;
+  };
   sections: SectionEntry[];
 };
 

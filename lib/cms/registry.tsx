@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Briefcase,
+  Droplet,
   FileText,
   FolderGit2,
   History,
@@ -13,6 +14,7 @@ import {
   Sparkles,
   User,
   Wrench,
+  Zap,
 } from "lucide-react";
 
 import type { SiteConfigKey } from "@/lib/cms/types";
@@ -334,6 +336,38 @@ export const EDITOR_SECTIONS: EditorSectionDef[] = [
       { key: "defaultVolume", label: "Default volume (0–1)", type: "number" },
       { key: "loop", label: "Loop", type: "toggle" },
       { key: "autoplay", label: "Autoplay", type: "toggle" },
+    ],
+  },
+  {
+    id: "preloader",
+    slug: "preloader",
+    title: "Words Preloader",
+    description: "SpaceUI-style word cycling loader with Malayalam support: word list, timing, and on/off toggle.",
+    icon: Zap,
+    group: "settings",
+    fields: [
+      { key: "enabled", label: "Show preloader", type: "toggle" },
+      {
+        key: "words",
+        label: "Words (cycled in order)",
+        type: "string-list",
+        placeholder: "ഹലോ",
+      },
+      { key: "duration", label: "Total duration (ms)", type: "number" },
+    ],
+  },
+  {
+    id: "heroGlow",
+    slug: "hero-glow",
+    title: "Hero Edge Glow",
+    description: "Viewport edge glow: on/off toggle, left/right colors, and edge width.",
+    icon: Droplet,
+    group: "settings",
+    fields: [
+      { key: "enabled", label: "Enable edge glow", type: "toggle" },
+      { key: "leftColor", label: "Left edge color", type: "color" },
+      { key: "rightColor", label: "Right edge color", type: "color" },
+      { key: "width", label: "Edge width (CSS value)", type: "text", placeholder: "min(22vw, 340px)" },
     ],
   },
   {
