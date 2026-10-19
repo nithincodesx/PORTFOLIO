@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   motion,
   useMotionValue,
@@ -49,39 +49,13 @@ const MATRIX_COLUMNS = [
   "110 NITHIN 010 NITHIN",
 ];
 
-/** Convert a hex color (#RGB or #RRGGBB) to rgba() with the given alpha. */
-function hexRgba(hex: string, alpha: number): string {
-  const raw = hex.replace("#", "").trim();
-  const full =
-    raw.length === 3
-      ? raw
-          .split("")
-          .map((c) => c + c)
-          .join("")
-      : raw.slice(0, 6);
-  const n = parseInt(full, 16);
-  if (Number.isNaN(n)) return `rgba(0,0,0,${alpha})`;
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
-  const cursorRef = useRef<HTMLDivElement>(null);
-
   /* While the fullscreen words intro plays, keep the nav + custom cursor
      hidden so only the loader words are visible. They fade in with the wipe. */
   const [introDone, setIntroDone] = useState(false);
+  const cursorRef = useRef<HTMLDivElement>(null);
 
-  /* Stable callback for the loader: reveal the hero copy once the words
-     intro has finished its exit wipe. */
-  const handleIntroDone = useCallback(() => setIntroDone(true), []);
-
-  const buttonsRef = useRef<HTMLDivElement>(null);
-  const statsRef = useRef<HTMLDivElement>(null);
-
-  /* 3D hero: mouse parallax + scroll dive */
+  /* ── 3D hero: mouse parallax + scroll dive ── */
   const heroRef = useRef<HTMLElement>(null);
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
@@ -100,20 +74,16 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.92]);
   const heroRotX = useTransform(scrollYProgress, [0, 1], [0, 8]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
+  const buttonsRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
 
   /* Editable content + section visibility/order from Firebase (falls back to
      the shipped defaults until/unless the Firestore document loads). */
   const { config } = useSiteConfig();
-  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme, preloader, heroGlow } =
+  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
     config;
   const [openProject, setOpenProject] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  /* When the preloader is disabled in the CMS, skip the intro entirely and
-     reveal the hero copy immediately. */
-  useEffect(() => {
-    if (!preloader.enabled) setIntroDone(true);
-  }, [preloader.enabled]);
   const orderedSections = [...config.sections]
     .sort((a, b) => a.order - b.order)
     .filter((entry) => entry.visible);
@@ -214,7 +184,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     };
     /* Re-runs when config resolves/changes so freshly rendered or reordered
        sections get their reveal observers and marquee track re-attached. */
-  }, [config]);
+  }, [config, mx, my]);
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
@@ -247,15 +217,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
      and caches it for 24h. ── */
 
   return (
-    <main className="editorial-root">
-      {preloader.enabled && (
-        <WordsPreloader
-          duration={preloader.duration}
-          words={preloader.words}
-          fullscreen
-          onComplete={handleIntroDone}
-        />
-      )}
+    <main className={introDone ? "editorial-root" : "editorial-root is-loading"}>
+      <WordsPreloader fullscreen duration={2900} onComplete={() => setIntroDone(true)} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -312,7 +275,35 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           border-bottom: 1px solid var(--border);
           background: rgba(12,12,12,0.85);
           backdrop-filter: blur(14px);
-          transition: transform 0.4s var(--ease-expo);
+          transition: transform 0.4s var(--ease-expo), opacity 0.6s ease, visibility 0.6s;
+        }
+        /* Hide chrome while the words intro plays — only loader words visible.
+           Nav + cursor fade/slide in right after the wipe completes. */
+        #main-nav {
+          opacity: 1;
+          visibility: visible;
+        }
+        .editorial-root.is-loading #main-nav {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transform: translateY(-100%) !important;
+        }
+        .editorial-root:not(.is-loading) #main-nav {
+          animation: nav-drop-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes nav-drop-in {
+          from { opacity: 0; transform: translateY(-100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .editorial-root.is-loading #ed-cursor,
+        .editorial-root.is-loading .hero-signal,
+        .editorial-root.is-loading .scroll-hint,
+        .editorial-root.is-loading .mobile-menu,
+        .editorial-root.is-loading .viewport-edge {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
         }
         .nav-logo {
           font-family: 'Syne', sans-serif;
@@ -422,33 +413,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            animation: hero-orbit 18s linear infinite;
            pointer-events: none;
          }
-        /* 3D hero layers */
-        .hero-tilt { transform-style: preserve-3d; will-change: transform; }
-        .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
-        .hero { overflow: clip; }
-        /* Viewport edge glow: fixed to the screen edges (not the hero box),
-           so shades spread past the container to the true page borders.
-           Left = green, right = gold. Inside stays pure dark. */
-        .viewport-edge {
-          position: fixed; top: 0; bottom: 0; width: ${heroGlow.width};
-          pointer-events: none; z-index: 1;
-          display: ${heroGlow.enabled ? "block" : "none"};
-        }
-        .viewport-edge-left {
-          left: 0;
-          background:
-            radial-gradient(130% 34% at 0% 12%, ${hexRgba(heroGlow.leftColor, 0.13)}, transparent 65%),
-            radial-gradient(130% 34% at 0% 88%, ${hexRgba(heroGlow.leftColor, 0.10)}, transparent 65%),
-            linear-gradient(90deg, ${hexRgba(heroGlow.leftColor, 0.05)}, transparent);
-        }
-        .viewport-edge-right {
-          right: 0;
-          background:
-            radial-gradient(130% 34% at 100% 12%, ${hexRgba(heroGlow.rightColor, 0.15)}, transparent 65%),
-            radial-gradient(130% 34% at 100% 88%, ${hexRgba(heroGlow.rightColor, 0.11)}, transparent 65%),
-            linear-gradient(270deg, ${hexRgba(heroGlow.rightColor, 0.05)}, transparent);
-        }
-        @keyframes hero-orbit { to { transform: rotate(360deg); } }
+         @keyframes hero-orbit { to { transform: rotate(360deg); } }
         .matrix-rain {
           position: absolute;
           inset: 0;
@@ -507,6 +472,31 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
         .hero-headline .line-bold { display: block; }
         .hero-headline .accent-dot { color: var(--amber); }
+        /* 3D hero layers */
+        .hero-tilt { transform-style: preserve-3d; will-change: transform; }
+        .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
+        .hero { overflow: clip; }
+        /* Viewport edge glow: fixed to the screen edges (not the hero box),
+           so shades spread past the container to the true page borders.
+           Left = green, right = gold. Inside stays pure dark. */
+        .viewport-edge {
+          position: fixed; top: 0; bottom: 0; width: min(22vw, 340px);
+          pointer-events: none; z-index: 1;
+        }
+        .viewport-edge-left {
+          left: 0;
+          background:
+            radial-gradient(130% 34% at 0% 12%, rgba(91,255,143,0.13), transparent 65%),
+            radial-gradient(130% 34% at 0% 88%, rgba(91,255,143,0.10), transparent 65%),
+            linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
+        }
+        .viewport-edge-right {
+          right: 0;
+          background:
+            radial-gradient(130% 34% at 100% 12%, rgba(245,166,35,0.15), transparent 65%),
+            radial-gradient(130% 34% at 100% 88%, rgba(245,166,35,0.11), transparent 65%),
+            linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
+        }
 
         /* Text reveal */
          .reveal-text {
@@ -1088,9 +1078,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         className="hero ed-container"
         style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
       >
-        <div className="hero-signal" aria-hidden="true">Live signal / portfolio 01</div>
+        <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
         <AmbientScan className="hero-scan" />
-        <div className="matrix-rain" aria-hidden="true">
+        <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
             <span
               key={index}
@@ -1104,7 +1094,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
               {column}
             </span>
           ))}
-        </div>
+        </motion.div>
 
         <motion.h1
           className="hero-headline hero-tilt"

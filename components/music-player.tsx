@@ -50,7 +50,7 @@ export function MusicPlayer() {
       await audio.play();
       setPlaying(true);
     } catch {
-      /* blocked — unlock listeners will retry on next gesture */
+      /* Still blocked — stays paused until a gesture unlocks it. */
     }
   }, []);
 
@@ -62,6 +62,7 @@ export function MusicPlayer() {
     const check = () => { if (audio.error) fail(); };
     audio.addEventListener("error", fail);
     check();
+    audio.volume = music.defaultVolume;
     audio.muted = true;
     setMuted(true);
     /* Start together with the words loader (muted autoplay always succeeds).
@@ -70,6 +71,7 @@ export function MusicPlayer() {
     const onFirstGesture = () => startAudible();
     window.addEventListener("words-intro-start", onIntroStart);
     if (music.autoplay) {
+      startPlayback();
       window.addEventListener("pointerdown", onFirstGesture);
       window.addEventListener("touchstart", onFirstGesture);
       window.addEventListener("keydown", onFirstGesture);

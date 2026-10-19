@@ -4,6 +4,13 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+/* Exact SpaceUI words — plus Malayalam. Last word stays short ("NK.")
+   so the curved wipe launches from a tight label, like the original. */
+const DEFAULT_WORDS = [
+  'ഹലോ', 'Hello', 'bonjour', 'നമസ്കാരം', 'Ciao', 'Olà',
+  'സ്വാഗതം', 'やあ', 'Hallå', 'Guten tag', 'നന്ദി', 'NK.',
+];
+
 export type WordsPreloaderProps = {
   words?: string[];
   duration?: number;
@@ -12,13 +19,6 @@ export type WordsPreloaderProps = {
   fullscreen?: boolean;
   onComplete?: () => void;
 };
-
-/* Exact SpaceUI words — plus Malayalam. Last word stays short ("NK.")
-   so the curved wipe launches from a tight label, like the original. */
-const DEFAULT_WORDS = [
-  'ഹലോ', 'Hello', 'bonjour', 'നമസ്കാരം', 'Ciao', 'Olà',
-  'സ്വാഗതം', 'やあ', 'Hallå', 'Guten tag', 'നന്ദി', 'NK.',
-];
 
 export function WordsPreloader({
   words = DEFAULT_WORDS,
@@ -36,7 +36,6 @@ export function WordsPreloader({
     window.dispatchEvent(new CustomEvent('words-intro-start'));
   }, []);
 
-  /* Play the words for `duration` ms, then start the exit wipe. */
   useEffect(() => {
     const timer = window.setTimeout(() => setIsLoading(false), duration);
     return () => window.clearTimeout(timer);
@@ -55,12 +54,11 @@ export function WordsPreloader({
     return () => { document.body.style.overflow = prevOverflow; };
   }, [fullscreen, isLoading]);
 
-
   if (fullscreen) {
     return (
       <AnimatePresence mode="wait">
         {isLoading ? (
-          <PreloaderContent key="words-preloader" words={words} duration={duration} fullscreen />
+          <PreloaderContent key="words-preloader" words={words} fullscreen />
         ) : null}
       </AnimatePresence>
     );
@@ -69,7 +67,7 @@ export function WordsPreloader({
   return (
     <div className={cn('relative h-full min-h-80 w-full overflow-hidden', className)}>
       <AnimatePresence mode="wait">
-        {isLoading ? <PreloaderContent key="words-preloader" words={words} duration={duration} /> : null}
+        {isLoading ? <PreloaderContent key="words-preloader" words={words} /> : null}
       </AnimatePresence>
       <div className="flex h-full min-h-80 w-full items-center justify-center">
         {children ?? 'Your landing page'}
@@ -78,7 +76,8 @@ export function WordsPreloader({
   );
 }
 
-function PreloaderContent({ words, duration = 2000, fullscreen = false }: { words: string[]; duration?: number; fullscreen?: boolean }) {
+
+function PreloaderContent({ words, fullscreen = false }: { words: string[]; fullscreen?: boolean }) {
   const [index, setIndex] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const [dimension, setDimension] = useState({ width: 0, height: 0 });
@@ -93,18 +92,11 @@ function PreloaderContent({ words, duration = 2000, fullscreen = false }: { word
     return () => ro.disconnect();
   }, []);
 
-  /* Spread the words across the configured intro length so the CMS timing
-     controls both the cycling speed and the total time on screen. */
-  const interval = Math.max(150, Math.round(duration / (words.length + 2)));
-
   useEffect(() => {
     if (index >= words.length - 1) return;
-    const timer = window.setTimeout(
-      () => setIndex((i) => i + 1),
-      index === 0 ? interval * 2 : interval,
-    );
+    const timer = window.setTimeout(() => setIndex((i) => i + 1), index === 0 ? 1000 : 150);
     return () => window.clearTimeout(timer);
-  }, [index, interval, words.length]);
+  }, [index, words.length]);
 
   const initialPath = `M0 0 L${dimension.width} 0 L${dimension.width} ${dimension.height} Q${dimension.width / 2} ${dimension.height + 300} 0 ${dimension.height}  L0 0`;
   const targetPath = `M0 0 L${dimension.width} 0 L${dimension.width} ${dimension.height} Q${dimension.width / 2} ${dimension.height} 0 ${dimension.height}  L0 0`;
