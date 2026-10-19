@@ -43,6 +43,9 @@ const MATRIX_COLUMNS = [
 ];
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
+  /* While the fullscreen words intro plays, keep the nav + custom cursor
+     hidden so only the loader words are visible. They fade in with the wipe. */
+  const [introDone, setIntroDone] = useState(false);
   const cursorRef = useRef<HTMLDivElement>(null);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
@@ -173,11 +176,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
      and caches it for 24h. ── */
 
   return (
-    <main className="editorial-root">
-      <WordsPreloader
-        duration={6500}
-        words={["ഹലോ", "HELLO", "NAMASKARAM", "AI ENGINEER", "LANDING PAGE", "NK."]}
-      />
+    <main className={introDone ? "editorial-root" : "editorial-root is-loading"}>
+      <WordsPreloader fullscreen duration={2900} onComplete={() => setIntroDone(true)} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -234,7 +234,34 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           border-bottom: 1px solid var(--border);
           background: rgba(12,12,12,0.85);
           backdrop-filter: blur(14px);
-          transition: transform 0.4s var(--ease-expo);
+          transition: transform 0.4s var(--ease-expo), opacity 0.6s ease, visibility 0.6s;
+        }
+        /* Hide chrome while the words intro plays — only loader words visible.
+           Nav + cursor fade/slide in right after the wipe completes. */
+        #main-nav {
+          opacity: 1;
+          visibility: visible;
+        }
+        .editorial-root.is-loading #main-nav {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transform: translateY(-100%) !important;
+        }
+        .editorial-root:not(.is-loading) #main-nav {
+          animation: nav-drop-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes nav-drop-in {
+          from { opacity: 0; transform: translateY(-100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .editorial-root.is-loading #ed-cursor,
+        .editorial-root.is-loading .hero-signal,
+        .editorial-root.is-loading .scroll-hint,
+        .editorial-root.is-loading .mobile-menu {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
         }
         .nav-logo {
           font-family: 'Syne', sans-serif;

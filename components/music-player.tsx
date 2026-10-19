@@ -7,8 +7,9 @@ import { usePathname } from "next/navigation";
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 
 /* BACKGROUND MUSIC PLAYER — in-flow bar at the very end of the page.
-   Autoplays on load; if the browser blocks audible autoplay, it unlocks
-   on the visitor's first click / tap / key / scroll.
+   Starts together with the words loader intro: it kicks off muted (which
+   browsers always allow) the instant the loader mounts, then unmutes on the
+   visitor's first click / tap / key / scroll.
    Track, volume, loop, and autoplay are editable in /control → Music. */
 
 export function MusicPlayer() {
@@ -28,6 +29,24 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     try {
+      /* Muted playback is never blocked — this is what lets music start
+         together with the loader even before any user gesture. */
+      const wasMuted = audio.muted;
+      audio.muted = true;
+      await audio.play();
+      audio.muted = wasMuted;
+      setPlaying(true);
+    } catch {
+      /* Still blocked — stays paused until a gesture unlocks it. */
+    }
+  }, []);
+
+  const startAudible = useCallback(async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    try {
+      audio.muted = false;
+      setMuted(false);
       await audio.play();
       setPlaying(true);
     } catch {
@@ -44,38 +63,41 @@ export function MusicPlayer() {
     audio.addEventListener("error", fail);
     check();
     audio.volume = music.defaultVolume;
-    /* Autoplay on load (when enabled in /control). If the browser blocks
-       audible autoplay, unlock on the very first gesture (click/tap/key/scroll). */
-    let unlock: (() => void) | null = null;
+    audio.muted = true;
+    setMuted(true);
+    /* Start together with the words loader (muted autoplay always succeeds).
+       First real gesture unmutes to audible. */
+    const onIntroStart = () => startPlayback();
+    const onFirstGesture = () => startAudible();
+    window.addEventListener("words-intro-start", onIntroStart);
     if (music.autoplay) {
       startPlayback();
-      unlock = () => startPlayback();
-      window.addEventListener("pointerdown", unlock);
-      window.addEventListener("touchstart", unlock);
-      window.addEventListener("keydown", unlock);
-      window.addEventListener("wheel", unlock, { passive: true });
+      window.addEventListener("pointerdown", onFirstGesture);
+      window.addEventListener("touchstart", onFirstGesture);
+      window.addEventListener("keydown", onFirstGesture);
+      window.addEventListener("wheel", onFirstGesture, { passive: true });
     }
     const poll = window.setInterval(check, 400);
     const stop = window.setTimeout(() => window.clearInterval(poll), 8000);
     return () => {
       cancelled = true;
       audio.removeEventListener("error", fail);
-      if (unlock) {
-        window.removeEventListener("pointerdown", unlock);
-        window.removeEventListener("touchstart", unlock);
-        window.removeEventListener("keydown", unlock);
-        window.removeEventListener("wheel", unlock);
-      }
+      window.removeEventListener("words-intro-start", onIntroStart);
+      window.removeEventListener("pointerdown", onFirstGesture);
+      window.removeEventListener("touchstart", onFirstGesture);
+      window.removeEventListener("keydown", onFirstGesture);
+      window.removeEventListener("wheel", onFirstGesture);
       window.clearInterval(poll);
       window.clearTimeout(stop);
     };
-  }, [startPlayback, music.autoplay, music.defaultVolume]);
+  }, [startPlayback, startAudible, music.autoplay, music.defaultVolume]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     audio.loop = loopOn;
-    audio.volume = muted ? 0 : volume;
+    audio.muted = muted;
+    audio.volume = volume;
   }, [loopOn, volume, muted]);
 
   /* Apply admin-configured defaults until the visitor touches the controls. */
@@ -89,10 +111,10 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     try {
-      if (audio.paused) { await startPlayback(); }
+      if (audio.paused) { await startAudible(); }
       else { audio.pause(); setPlaying(false); }
     } catch { /* blocked — unlock listeners will retry on next gesture */ }
-  }, [startPlayback]);
+  }, [startAudible]);
 
   /* No music bar on the admin panel; respect the "enabled" toggle too. */
   if (pathname.startsWith("/control") || !music.enabled || unavailable) return null;
@@ -121,7 +143,7 @@ export function MusicPlayer() {
   .mp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; border-radius: 50%; background: ${config.theme.accent}; cursor: pointer; }
   .mp-range::-moz-range-thumb { width: 8px; height: 8px; border: 0; border-radius: 50%; background: ${config.theme.accent}; cursor: pointer; }
       `}</style>
-      <audio ref={audioRef} src={music.src} preload="auto" onError={() => setUnavailable(true)} onEnded={() => setPlaying(false)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+      <audio ref={audioRef} src={music.src} preload="auto" muted playsInline onError={() => setUnavailable(true)} onEnded={() => setPlaying(false)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
       <div className="mp-bar">
         <button type="button" className="mp-btn mp-play" onClick={toggle} aria-label={playing ? "Pause music" : "Play music"}>
           {playing ? <Pause size={14} /> : <Play size={14} />}
