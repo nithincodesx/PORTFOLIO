@@ -1,6 +1,13 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  useScroll,
+} from "framer-motion";
 
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
@@ -47,6 +54,28 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
      hidden so only the loader words are visible. They fade in with the wipe. */
   const [introDone, setIntroDone] = useState(false);
   const cursorRef = useRef<HTMLDivElement>(null);
+
+  /* ── 3D hero: mouse parallax + scroll dive ── */
+  const heroRef = useRef<HTMLElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 55, damping: 18, mass: 0.6 });
+  const sy = useSpring(my, { stiffness: 55, damping: 18, mass: 0.6 });
+  const tiltX = useTransform(sy, [-0.5, 0.5], [7, -7]);
+  const tiltY = useTransform(sx, [-0.5, 0.5], [-9, 9]);
+  const layerBgX = useTransform(sx, [-0.5, 0.5], [12, -12]);
+  const layerBgY = useTransform(sy, [-0.5, 0.5], [10, -10]);
+  const layerFgX = useTransform(sx, [-0.5, 0.5], [-26, 26]);
+  const layerFgY = useTransform(sy, [-0.5, 0.5], [-20, 20]);
+  const orbX = useTransform(sx, [-0.5, 0.5], [46, -46]);
+  const orbY = useTransform(sy, [-0.5, 0.5], [34, -34]);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.92]);
+  const heroRotX = useTransform(scrollYProgress, [0, 1], [0, 8]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +133,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
 
+    /* ── 3D hero mouse tracking (drives parallax + tilt springs) ── */
+    const heroEl = heroRef.current;
+    const trackHeroMouse = (e: MouseEvent) => {
+      if (!heroEl || !finePointer || reduceMotion) return;
+      const rect = heroEl.getBoundingClientRect();
+      mx.set((e.clientX - rect.left) / rect.width - 0.5);
+      my.set((e.clientY - rect.top) / rect.height - 0.5);
+    };
+    const resetHeroMouse = () => { mx.set(0); my.set(0); };
+    heroEl?.addEventListener("mousemove", trackHeroMouse);
+    heroEl?.addEventListener("mouseleave", resetHeroMouse);
+
     /* ── Navbar hide on scroll down ── */
     let lastY = 0;
     const nav = document.getElementById("main-nav");
@@ -134,6 +175,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     return () => {
       window.removeEventListener("mousemove", moveCursor);
       window.removeEventListener("scroll", handleScroll);
+      heroEl?.removeEventListener("mousemove", trackHeroMouse);
+      heroEl?.removeEventListener("mouseleave", resetHeroMouse);
       hoverables.forEach((el) => {
         el.removeEventListener("mouseenter", enterHover);
         el.removeEventListener("mouseleave", leaveHover);
@@ -143,7 +186,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     };
     /* Re-runs when config resolves/changes so freshly rendered or reordered
        sections get their reveal observers and marquee track re-attached. */
-  }, [config]);
+  }, [config, mx, my]);
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
@@ -430,6 +473,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
         .hero-headline .line-bold { display: block; }
         .hero-headline .accent-dot { color: var(--amber); }
+        /* 3D hero layers */
+        .hero-tilt { transform-style: preserve-3d; will-change: transform; }
+        .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
+        .hero-orb { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; }
+        .hero-orb-a {
+          width: 34rem; height: 34rem; top: -8rem; right: -6rem;
+          background: radial-gradient(circle, rgba(245,166,35,0.20), transparent 65%);
+          mix-blend-mode: screen;
+          animation: float 7s ease-in-out infinite;
+        }
+        .hero-orb-b {
+          width: 26rem; height: 26rem; bottom: 6rem; left: -8rem;
+          background: radial-gradient(circle, rgba(91,255,143,0.10), transparent 65%);
+          mix-blend-mode: screen;
+          animation: float 9s ease-in-out infinite reverse;
+        }
 
         /* Text reveal */
          .reveal-text {
@@ -1001,10 +1060,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Hero ─────────────────────────────────────────────────── */}
           {section.id === "hero" && (
             <>
-      <section id="home" className="hero ed-container">
-        <div className="hero-signal" aria-hidden="true">Live signal / portfolio 01</div>
+      <motion.section
+        id="home"
+        ref={heroRef}
+        className="hero ed-container"
+        style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
+      >
+        <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
+        <motion.div className="hero-orb hero-orb-a" aria-hidden="true" style={{ x: orbX, y: orbY }} />
+        <motion.div className="hero-orb hero-orb-b" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
         <AmbientScan className="hero-scan" />
-        <div className="matrix-rain" aria-hidden="true">
+        <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
             <span
               key={index}
@@ -1018,17 +1084,28 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
               {column}
             </span>
           ))}
-        </div>
+        </motion.div>
 
-        <h1 className="hero-headline">
-          <span className="line-light reveal-text">{hero.headline.line1}</span>
-          <span className="line-bold reveal-text delay-1">{hero.headline.line2}</span>
-          <span className="line-bold reveal-text delay-2">
+        <motion.h1
+          className="hero-headline hero-tilt"
+          style={{ rotateX: tiltX, rotateY: tiltY, x: layerFgX, transformPerspective: 1000 }}
+          initial={false}
+          animate={introDone ? "in" : "hidden"}
+          variants={{ hidden: {}, in: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } } }}
+        >
+          <motion.span className="line-light ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line1}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line2}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>
             {hero.headline.line3}<span className="accent-dot">{hero.headline.accent}</span>
-          </span>
-        </h1>
+          </motion.span>
+        </motion.h1>
 
-        <div className="hero-sub scroll-fade delay-3">
+        <motion.div
+          className="hero-sub"
+          initial={false}
+          animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+          transition={{ duration: 0.8, delay: introDone ? 0.7 : 0, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="hero-description">
             {hero.description}
           </p>
@@ -1041,8 +1118,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
               <ContributionCalendar />
             </div>
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
             </>
           )}
           {section.id === "hero" && section.dividerAfter && <div className="divider" />}
