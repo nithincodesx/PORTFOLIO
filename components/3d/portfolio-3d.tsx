@@ -6,9 +6,9 @@ import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
 import { AmbientScan } from "@/components/motion/ambient-scan";
-import { BootSequence } from "@/components/motion/boot-sequence";
 import { MagneticButton } from "@/components/motion/magnetic-button";
 import { ProjectDetail } from "@/components/motion/project-detail";
+import { WordsPreloader } from "@/components/spaceui/words-preloader";
 import type { RenderableSectionId } from "@/lib/cms/types";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -174,7 +174,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <main className="editorial-root">
-      <BootSequence duration={1800} />
+      <WordsPreloader duration={2200} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
