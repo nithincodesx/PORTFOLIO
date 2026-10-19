@@ -477,6 +477,21 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
         .hero { overflow: clip; }
+        /* Full-bleed ambient washes — span edge to edge so no box edges show. */
+        .hero-wash {
+          position: absolute; inset: 0; pointer-events: none; z-index: 0;
+          mix-blend-mode: screen;
+        }
+        .hero-wash-left {
+          background:
+            radial-gradient(60% 55% at 0% 20%, rgba(245,166,35,0.22), transparent 70%),
+            radial-gradient(45% 45% at 8% 85%, rgba(245,166,35,0.12), transparent 70%);
+        }
+        .hero-wash-right {
+          background:
+            radial-gradient(60% 55% at 100% 30%, rgba(245,166,35,0.16), transparent 70%),
+            radial-gradient(40% 40% at 92% 90%, rgba(91,255,143,0.10), transparent 70%);
+        }
         .hero-orb { position: absolute; border-radius: 999px; filter: blur(110px); pointer-events: none; z-index: 0; }
         .hero-orb-a {
           width: min(52vw, 46rem); height: min(52vw, 46rem);
@@ -1080,6 +1095,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
       >
         <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
+        <motion.div className="hero-wash hero-wash-left" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
+        <motion.div className="hero-wash hero-wash-right" aria-hidden="true" style={{ x: orbX, y: orbY }} />
         <motion.div className="hero-orb hero-orb-a" aria-hidden="true" style={{ x: orbX, y: orbY }} />
         <motion.div className="hero-orb hero-orb-b" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
         <motion.div className="hero-orb hero-orb-c" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }} />
