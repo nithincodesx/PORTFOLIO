@@ -93,7 +93,8 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     audio.loop = loopOn;
-    audio.volume = muted ? 0 : volume;
+    audio.muted = muted;
+    audio.volume = volume;
   }, [loopOn, volume, muted]);
 
   /* Apply admin-configured defaults until the visitor touches the controls. */
@@ -139,7 +140,7 @@ export function MusicPlayer() {
   .mp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; border-radius: 50%; background: ${config.theme.accent}; cursor: pointer; }
   .mp-range::-moz-range-thumb { width: 8px; height: 8px; border: 0; border-radius: 50%; background: ${config.theme.accent}; cursor: pointer; }
       `}</style>
-      <audio ref={audioRef} src={music.src} preload="auto" onError={() => setUnavailable(true)} onEnded={() => setPlaying(false)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
+      <audio ref={audioRef} src={music.src} preload="auto" muted playsInline onError={() => setUnavailable(true)} onEnded={() => setPlaying(false)} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} />
       <div className="mp-bar">
         <button type="button" className="mp-btn mp-play" onClick={toggle} aria-label={playing ? "Pause music" : "Play music"}>
           {playing ? <Pause size={14} /> : <Play size={14} />}
