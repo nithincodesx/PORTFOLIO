@@ -475,19 +475,25 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
         .hero { overflow: clip; }
-        /* Subtle edge glow: hugs the far left + right page borders only.
-           Inside stays pure dark. */
+        /* Subtle edge glow: small corner-bleeding shades only.
+           Left = green tint, right = gold. Inside stays pure dark. */
         .hero-edge {
-          position: absolute; top: 0; bottom: 0; width: 180px;
+          position: absolute; top: 0; bottom: 0; width: 220px;
           pointer-events: none; z-index: 0;
         }
         .hero-edge-left {
           left: 0;
-          background: linear-gradient(90deg, rgba(245,166,35,0.14), transparent);
+          background:
+            radial-gradient(120% 40% at 0% 0%, rgba(91,255,143,0.12), transparent 65%),
+            radial-gradient(120% 40% at 0% 100%, rgba(91,255,143,0.10), transparent 65%),
+            linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
         }
         .hero-edge-right {
           right: 0;
-          background: linear-gradient(270deg, rgba(245,166,35,0.10), transparent);
+          background:
+            radial-gradient(120% 40% at 100% 0%, rgba(245,166,35,0.14), transparent 65%),
+            radial-gradient(120% 40% at 100% 100%, rgba(245,166,35,0.11), transparent 65%),
+            linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
         }
 
         /* Text reveal */
