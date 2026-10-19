@@ -475,15 +475,19 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
         .hero { overflow: clip; }
-        /* One sweeping shade: colour starts on the left, fades across to the right. */
-        .hero-shade {
-          position: absolute; inset: 0; pointer-events: none; z-index: 0;
-          background: linear-gradient(100deg,
-            rgba(245,166,35,0.20) 0%,
-            rgba(245,166,35,0.10) 28%,
-            rgba(245,166,35,0.04) 48%,
-            transparent 68%);
-          mix-blend-mode: screen;
+        /* Subtle edge glow: hugs the far left + right page borders only.
+           Inside stays pure dark. */
+        .hero-edge {
+          position: absolute; top: 0; bottom: 0; width: 180px;
+          pointer-events: none; z-index: 0;
+        }
+        .hero-edge-left {
+          left: 0;
+          background: linear-gradient(90deg, rgba(245,166,35,0.14), transparent);
+        }
+        .hero-edge-right {
+          right: 0;
+          background: linear-gradient(270deg, rgba(245,166,35,0.10), transparent);
         }
 
         /* Text reveal */
@@ -1063,7 +1067,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
       >
         <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
-        <motion.div className="hero-shade" aria-hidden="true" style={{ x: layerBgX }} />
+        <div className="hero-edge hero-edge-left" aria-hidden="true" />
+        <div className="hero-edge hero-edge-right" aria-hidden="true" />
         <AmbientScan className="hero-scan" />
         <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
