@@ -299,7 +299,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .editorial-root.is-loading #ed-cursor,
         .editorial-root.is-loading .hero-signal,
         .editorial-root.is-loading .scroll-hint,
-        .editorial-root.is-loading .mobile-menu {
+        .editorial-root.is-loading .mobile-menu,
+        .editorial-root.is-loading .viewport-edge {
           opacity: 0 !important;
           visibility: hidden !important;
           pointer-events: none !important;
@@ -475,24 +476,25 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
         .hero { overflow: clip; }
-        /* Subtle edge glow: small corner-bleeding shades only.
-           Left = green tint, right = gold. Inside stays pure dark. */
-        .hero-edge {
-          position: absolute; top: 0; bottom: 0; width: 220px;
-          pointer-events: none; z-index: 0;
+        /* Viewport edge glow: fixed to the screen edges (not the hero box),
+           so shades spread past the container to the true page borders.
+           Left = green, right = gold. Inside stays pure dark. */
+        .viewport-edge {
+          position: fixed; top: 0; bottom: 0; width: min(22vw, 340px);
+          pointer-events: none; z-index: 1;
         }
-        .hero-edge-left {
+        .viewport-edge-left {
           left: 0;
           background:
-            radial-gradient(120% 40% at 0% 0%, rgba(91,255,143,0.12), transparent 65%),
-            radial-gradient(120% 40% at 0% 100%, rgba(91,255,143,0.10), transparent 65%),
+            radial-gradient(130% 34% at 0% 12%, rgba(91,255,143,0.13), transparent 65%),
+            radial-gradient(130% 34% at 0% 88%, rgba(91,255,143,0.10), transparent 65%),
             linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
         }
-        .hero-edge-right {
+        .viewport-edge-right {
           right: 0;
           background:
-            radial-gradient(120% 40% at 100% 0%, rgba(245,166,35,0.14), transparent 65%),
-            radial-gradient(120% 40% at 100% 100%, rgba(245,166,35,0.11), transparent 65%),
+            radial-gradient(130% 34% at 100% 12%, rgba(245,166,35,0.15), transparent 65%),
+            radial-gradient(130% 34% at 100% 88%, rgba(245,166,35,0.11), transparent 65%),
             linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
         }
 
@@ -1025,6 +1027,10 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       {/* ── Custom Cursor ────────────────────────────────────────── */}
       <div id="ed-cursor" ref={cursorRef} />
 
+      {/* ── Viewport edge glow (fixed to screen borders, not the hero box) ── */}
+      <div className="viewport-edge viewport-edge-left" aria-hidden="true" />
+      <div className="viewport-edge viewport-edge-right" aria-hidden="true" />
+
       {/* ── Navbar ───────────────────────────────────────────────── */}
        <nav id="main-nav">
          <a href="#home" className="nav-logo">NK.</a>
@@ -1073,8 +1079,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
       >
         <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
-        <div className="hero-edge hero-edge-left" aria-hidden="true" />
-        <div className="hero-edge hero-edge-right" aria-hidden="true" />
         <AmbientScan className="hero-scan" />
         <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
