@@ -61,33 +61,33 @@ export function MusicPlayer() {
     const check = () => { if (audio.error) fail(); };
     audio.addEventListener("error", fail);
     check();
-    audio.volume = music.defaultVolume;
-    /* Autoplay on load (when enabled in /control). If the browser blocks
-       audible autoplay, unlock on the very first gesture (click/tap/key/scroll). */
-    let unlock: (() => void) | null = null;
+    audio.muted = true;
+    setMuted(true);
+    /* Start together with the words loader (muted autoplay always succeeds).
+       First real gesture unmutes to audible. */
+    const onIntroStart = () => startPlayback();
+    const onFirstGesture = () => startAudible();
+    window.addEventListener("words-intro-start", onIntroStart);
     if (music.autoplay) {
-      startPlayback();
-      unlock = () => startPlayback();
-      window.addEventListener("pointerdown", unlock);
-      window.addEventListener("touchstart", unlock);
-      window.addEventListener("keydown", unlock);
-      window.addEventListener("wheel", unlock, { passive: true });
+      window.addEventListener("pointerdown", onFirstGesture);
+      window.addEventListener("touchstart", onFirstGesture);
+      window.addEventListener("keydown", onFirstGesture);
+      window.addEventListener("wheel", onFirstGesture, { passive: true });
     }
     const poll = window.setInterval(check, 400);
     const stop = window.setTimeout(() => window.clearInterval(poll), 8000);
     return () => {
       cancelled = true;
       audio.removeEventListener("error", fail);
-      if (unlock) {
-        window.removeEventListener("pointerdown", unlock);
-        window.removeEventListener("touchstart", unlock);
-        window.removeEventListener("keydown", unlock);
-        window.removeEventListener("wheel", unlock);
-      }
+      window.removeEventListener("words-intro-start", onIntroStart);
+      window.removeEventListener("pointerdown", onFirstGesture);
+      window.removeEventListener("touchstart", onFirstGesture);
+      window.removeEventListener("keydown", onFirstGesture);
+      window.removeEventListener("wheel", onFirstGesture);
       window.clearInterval(poll);
       window.clearTimeout(stop);
     };
-  }, [startPlayback, music.autoplay, music.defaultVolume]);
+  }, [startPlayback, startAudible, music.autoplay, music.defaultVolume]);
 
   useEffect(() => {
     const audio = audioRef.current;
