@@ -390,7 +390,32 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            animation: hero-orbit 18s linear infinite;
            pointer-events: none;
          }
-         @keyframes hero-orbit { to { transform: rotate(360deg); } }
+        /* 3D hero layers */
+        .hero-tilt { transform-style: preserve-3d; will-change: transform; }
+        .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
+        .hero { overflow: clip; }
+        /* Viewport edge glow: fixed to the screen edges (not the hero box),
+           so shades spread past the container to the true page borders.
+           Left = green, right = gold. Inside stays pure dark. */
+        .viewport-edge {
+          position: fixed; top: 0; bottom: 0; width: min(22vw, 340px);
+          pointer-events: none; z-index: 1;
+        }
+        .viewport-edge-left {
+          left: 0;
+          background:
+            radial-gradient(130% 34% at 0% 12%, rgba(91,255,143,0.13), transparent 65%),
+            radial-gradient(130% 34% at 0% 88%, rgba(91,255,143,0.10), transparent 65%),
+            linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
+        }
+        .viewport-edge-right {
+          right: 0;
+          background:
+            radial-gradient(130% 34% at 100% 12%, rgba(245,166,35,0.15), transparent 65%),
+            radial-gradient(130% 34% at 100% 88%, rgba(245,166,35,0.11), transparent 65%),
+            linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
+        }
+        @keyframes hero-orbit { to { transform: rotate(360deg); } }
         .matrix-rain {
           position: absolute;
           inset: 0;
