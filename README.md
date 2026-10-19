@@ -18,6 +18,14 @@ npm run dev
 Open <http://localhost:3000>. The public portfolio is served at `/`; `/3d` is
 kept as a legacy alias.
 
+Development writes to `.next-dev/`; production builds use `.next/`. This keeps
+`npm run build` from corrupting a running development preview.
+
+The top navigation is the single section index (a Menu button on mobile).
+Click a project row to reveal its description and inline image; moving the
+pointer does not open or dismiss project images. Motion respects the visitor's
+reduced-motion preference.
+
 ## Checks
 
 ```bash

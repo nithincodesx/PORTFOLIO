@@ -1,0 +1,9 @@
+node_modules
+.next
+.next-dev
+.git
+.opencode
+.env*
+!.env.example
+*.log
+*.zip
