@@ -1004,6 +1004,10 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       {/* ── Custom Cursor ────────────────────────────────────────── */}
       <div id="ed-cursor" ref={cursorRef} />
 
+      {/* ── Viewport edge glow (fixed to screen borders, not the hero box) ── */}
+      <div className="viewport-edge viewport-edge-left" aria-hidden="true" />
+      <div className="viewport-edge viewport-edge-right" aria-hidden="true" />
+
       {/* ── Navbar ───────────────────────────────────────────────── */}
        <nav id="main-nav">
          <a href="#home" className="nav-logo">NK.</a>
