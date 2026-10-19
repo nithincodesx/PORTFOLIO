@@ -7,8 +7,9 @@ import { usePathname } from "next/navigation";
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 
 /* BACKGROUND MUSIC PLAYER — in-flow bar at the very end of the page.
-   Autoplays on load; if the browser blocks audible autoplay, it unlocks
-   on the visitor's first click / tap / key / scroll.
+   Starts together with the words loader intro: it kicks off muted (which
+   browsers always allow) the instant the loader mounts, then unmutes on the
+   visitor's first click / tap / key / scroll.
    Track, volume, loop, and autoplay are editable in /control → Music. */
 
 export function MusicPlayer() {
