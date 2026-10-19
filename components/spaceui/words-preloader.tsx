@@ -36,6 +36,19 @@ export function WordsPreloader({
     window.dispatchEvent(new CustomEvent('words-intro-start'));
   }, []);
 
+  useEffect(() => {
+    if (isLoading) return;
+    const timer = window.setTimeout(() => onComplete?.(), 1100);
+    return () => window.clearTimeout(timer);
+  }, [isLoading, onComplete]);
+
+  useEffect(() => {
+    if (!fullscreen || !isLoading) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prevOverflow; };
+  }, [fullscreen, isLoading]);
+
 
   return (
     <>
