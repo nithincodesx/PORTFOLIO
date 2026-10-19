@@ -67,8 +67,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const layerBgY = useTransform(sy, [-0.5, 0.5], [10, -10]);
   const layerFgX = useTransform(sx, [-0.5, 0.5], [-26, 26]);
   const layerFgY = useTransform(sy, [-0.5, 0.5], [-20, 20]);
-  const orbX = useTransform(sx, [-0.5, 0.5], [46, -46]);
-  const orbY = useTransform(sy, [-0.5, 0.5], [34, -34]);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -477,45 +475,15 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
         .hero { overflow: clip; }
-        /* Full-bleed ambient washes — span edge to edge so no box edges show. */
-        .hero-wash {
+        /* One sweeping shade: colour starts on the left, fades across to the right. */
+        .hero-shade {
           position: absolute; inset: 0; pointer-events: none; z-index: 0;
+          background: linear-gradient(100deg,
+            rgba(245,166,35,0.20) 0%,
+            rgba(245,166,35,0.10) 28%,
+            rgba(245,166,35,0.04) 48%,
+            transparent 68%);
           mix-blend-mode: screen;
-        }
-        .hero-wash-left {
-          background:
-            radial-gradient(60% 55% at 0% 20%, rgba(245,166,35,0.22), transparent 70%),
-            radial-gradient(45% 45% at 8% 85%, rgba(245,166,35,0.12), transparent 70%);
-        }
-        .hero-wash-right {
-          background:
-            radial-gradient(60% 55% at 100% 30%, rgba(245,166,35,0.16), transparent 70%),
-            radial-gradient(40% 40% at 92% 90%, rgba(91,255,143,0.10), transparent 70%);
-        }
-        .hero-orb { position: absolute; border-radius: 999px; filter: blur(110px); pointer-events: none; z-index: 0; }
-        .hero-orb-a {
-          width: min(52vw, 46rem); height: min(52vw, 46rem);
-          top: -14rem; right: -14rem;
-          background:
-            radial-gradient(closest-side, rgba(245,166,35,0.28), rgba(245,166,35,0.08) 55%, transparent 72%);
-          mix-blend-mode: screen;
-          animation: float 7s ease-in-out infinite;
-        }
-        .hero-orb-b {
-          width: min(44vw, 38rem); height: min(44vw, 38rem);
-          bottom: -10rem; left: -12rem;
-          background:
-            radial-gradient(closest-side, rgba(91,255,143,0.14), rgba(91,255,143,0.05) 55%, transparent 72%);
-          mix-blend-mode: screen;
-          animation: float 9s ease-in-out infinite reverse;
-        }
-        .hero-orb-c {
-          width: min(30vw, 26rem); height: min(30vw, 26rem);
-          top: 30%; left: 55%;
-          background:
-            radial-gradient(closest-side, rgba(245,166,35,0.10), transparent 70%);
-          mix-blend-mode: screen;
-          animation: float 11s ease-in-out infinite;
         }
 
         /* Text reveal */
@@ -1095,11 +1063,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
       >
         <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
-        <motion.div className="hero-wash hero-wash-left" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
-        <motion.div className="hero-wash hero-wash-right" aria-hidden="true" style={{ x: orbX, y: orbY }} />
-        <motion.div className="hero-orb hero-orb-a" aria-hidden="true" style={{ x: orbX, y: orbY }} />
-        <motion.div className="hero-orb hero-orb-b" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
-        <motion.div className="hero-orb hero-orb-c" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }} />
+        <motion.div className="hero-shade" aria-hidden="true" style={{ x: layerBgX }} />
         <AmbientScan className="hero-scan" />
         <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
