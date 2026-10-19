@@ -1044,15 +1044,26 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           ))}
         </div>
 
-        <h1 className="hero-headline">
-          <span className="line-light reveal-text">{hero.headline.line1}</span>
-          <span className="line-bold reveal-text delay-1">{hero.headline.line2}</span>
-          <span className="line-bold reveal-text delay-2">
+        <motion.h1
+          className="hero-headline hero-tilt"
+          style={{ rotateX: tiltX, rotateY: tiltY, x: layerFgX, transformPerspective: 1000 }}
+          initial={false}
+          animate={introDone ? "in" : "hidden"}
+          variants={{ hidden: {}, in: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } } }}
+        >
+          <motion.span className="line-light ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line1}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line2}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>
             {hero.headline.line3}<span className="accent-dot">{hero.headline.accent}</span>
-          </span>
-        </h1>
+          </motion.span>
+        </motion.h1>
 
-        <div className="hero-sub scroll-fade delay-3">
+        <motion.div
+          className="hero-sub"
+          initial={false}
+          animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+          transition={{ duration: 0.8, delay: introDone ? 0.7 : 0, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="hero-description">
             {hero.description}
           </p>
@@ -1065,7 +1076,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
               <ContributionCalendar />
             </div>
           </div>
-        </div>
+        </motion.div>
       </motion.section>
             </>
           )}
