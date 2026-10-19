@@ -1,14 +1,16 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export type WordsPreloaderProps = {
-  children?: ReactNode;
-  className?: string;
-  duration?: number;
   words?: string[];
+  duration?: number;
+  className?: string;
+  children?: ReactNode;
+  fullscreen?: boolean;
+  onComplete?: () => void;
 };
 
 /* Exact SpaceUI words — plus Malayalam. Last word stays short ("NK.")
@@ -19,28 +21,21 @@ const DEFAULT_WORDS = [
 ];
 
 export function WordsPreloader({
-  children,
-  className,
-  duration = 2200,
   words = DEFAULT_WORDS,
+  duration = 2000,
+  className,
+  children,
+  fullscreen = false,
+  onComplete,
 }: WordsPreloaderProps) {
-  const safeDuration = Number.isFinite(duration) ? Math.max(4200, duration) : 5200;
-  const [active, setActive] = useState(true);
-  const [started, setStarted] = useState(false);
-  const style = { "--words-duration": `${safeDuration}ms` } as CSSProperties;
+  const [isLoading, setIsLoading] = useState(true);
 
+  /* Tell the music player the intro started so audio kicks in together
+     with the loader words (browsers may still need a first click). */
   useEffect(() => {
-    setStarted(true);
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timeout = window.setTimeout(
-      () => setActive(false),
-      reducedMotion ? 4000 : safeDuration + 120,
-    );
+    window.dispatchEvent(new CustomEvent('words-intro-start'));
+  }, []);
 
-    return () => window.clearTimeout(timeout);
-  }, [safeDuration]);
-
-  if (!active) return null;
 
   return (
     <>
@@ -217,8 +212,7 @@ export function WordsPreloader({
 
       <div
         aria-hidden="true"
-        className={`${className ? `words-preloader ${className}` : "words-preloader"}${started ? " is-playing" : ""}`}
-        style={style}
+        className={`${className ? `words-preloader ${className}` : "words-preloader"}`}
       >
         <div className="words-preloader__content">
           <p className="words-preloader__label">NITHIN KRISHNA / PORTFOLIO</p>
@@ -227,7 +221,6 @@ export function WordsPreloader({
               <p
                 className="words-preloader__word"
                 key={`${word}-${index}`}
-                style={{ "--word-delay": `${index * (safeDuration / Math.max(words.length, 1))}ms` } as CSSProperties}
               >
                 {word}
               </p>
