@@ -1,13 +1,14 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
+import { AmbientScan } from "@/components/motion/ambient-scan";
 import { BootSequence } from "@/components/motion/boot-sequence";
-import { ChapterIndicator } from "@/components/motion/chapter-indicator";
 import { MagneticButton } from "@/components/motion/magnetic-button";
+import { ProjectDetail } from "@/components/motion/project-detail";
 import type { RenderableSectionId } from "@/lib/cms/types";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -43,8 +44,6 @@ const MATRIX_COLUMNS = [
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
-  const projectPreviewRef = useRef<HTMLDivElement>(null);
-  const previewPositionRef = useRef({ x: 32, y: 32 });
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
@@ -54,22 +53,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
   const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
     config;
   const [openProject, setOpenProject] = useState<string | null>(null);
-  const [activeChapter, setActiveChapter] = useState<string | null>("home");
-  const [previewProject, setPreviewProject] = useState<(typeof projects.items)[number] | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const orderedSections = [...config.sections]
     .sort((a, b) => a.order - b.order)
     .filter((entry) => entry.visible);
   const visibleSectionIds = new Set<string>(orderedSections.map((entry) => entry.id));
-  const chapterItems = useMemo(
-    () => [
-      { id: "home", label: "Signal" },
-      ...orderedSections
-        .filter(({ id }) => id !== "hero" && id !== "marquee" && id !== "gallery")
-        .map(({ id, label }) => ({ id, label })),
-    ],
-    [config.sections],
-  );
 
   useEffect(() => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -113,20 +101,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
 
-    const chapterObserver = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setActiveChapter(visible.target.id);
-      },
-      { rootMargin: "-35% 0px -55% 0px", threshold: [0.05, 0.2, 0.5] },
-    );
-    chapterItems.forEach(({ id }) => {
-      const section = document.getElementById(id);
-      if (section) chapterObserver.observe(section);
-    });
-
     /* ── Navbar hide on scroll down ── */
     let lastY = 0;
     const nav = document.getElementById("main-nav");
@@ -162,12 +136,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         el.removeEventListener("mouseleave", leaveHover);
       });
       io.disconnect();
-      chapterObserver.disconnect();
       if (marqueeRaf) cancelAnimationFrame(marqueeRaf);
     };
     /* Re-runs when config resolves/changes so freshly rendered or reordered
        sections get their reveal observers and marquee track re-attached. */
-  }, [chapterItems, config]);
+  }, [config]);
 
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
@@ -194,20 +167,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     observer.observe(buttons);
     return () => observer.disconnect();
   }, []);
-
-  const handleProjectPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const preview = projectPreviewRef.current;
-    if (!preview || event.pointerType === "touch") return;
-    previewPositionRef.current = { x: event.clientX + 26, y: event.clientY + 26 };
-    preview.style.setProperty("--preview-x", `${previewPositionRef.current.x}px`);
-    preview.style.setProperty("--preview-y", `${previewPositionRef.current.y}px`);
-  };
-
-  useEffect(() => {
-    if (!previewProject || !projectPreviewRef.current) return;
-    projectPreviewRef.current.style.setProperty("--preview-x", `${previewPositionRef.current.x}px`);
-    projectPreviewRef.current.style.setProperty("--preview-y", `${previewPositionRef.current.y}px`);
-  }, [previewProject]);
 
   /* ── GitHub contribution calendar is rendered inside the hero (see
      <ContributionCalendar /> below) — it loads its own real contribution data
@@ -256,10 +215,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
                       height 0.25s var(--ease-expo),
                       background-color 0.25s ease;
         }
-        #ed-cursor.hovered {
-          width: 44px; height: 44px;
-          background: var(--amber);
-          opacity: 0.75;
+         #ed-cursor.hovered {
+           width: 24px; height: 24px;
+           background: transparent;
+           border: 1px solid var(--amber);
+           opacity: 1;
         }
 
         /* ── Nav ───────────────────────────────────────────────────── */
@@ -317,7 +277,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          .mobile-menu { display: none; }
          .nav-link:focus-visible, .nav-available:focus-visible, .nav-logo:focus-visible,
          .btn-solid:focus-visible, .btn-ghost:focus-visible, .social-link:focus-visible,
-         .footer-logo:focus-visible, .project-open-link:focus-visible {
+         .footer-logo:focus-visible {
            outline: 1px solid var(--amber);
            outline-offset: 0.35rem;
          }
@@ -327,9 +287,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            max-width: 1440px;
            margin: 0 auto;
            padding: 0 4rem;
-         }
-         @media (min-width: 1100px) {
-           .editorial-root { padding-right: clamp(5rem, 8vw, 9rem); }
          }
         .divider {
           height: 1px;
@@ -450,9 +407,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            transform: translateY(50px);
            transition: opacity 1s var(--ease-expo), transform 1s var(--ease-expo);
          }
-         .reveal-text { animation: hero-line-in 1.15s var(--ease-expo) both; }
-         .reveal-text.delay-1 { animation-delay: 120ms; }
-         .reveal-text.delay-2 { animation-delay: 240ms; }
+         .reveal-text { animation: hero-line-in 1.15s var(--ease-expo) 1.45s both; }
+         .reveal-text.delay-1 { animation-delay: 1.58s; }
+         .reveal-text.delay-2 { animation-delay: 1.72s; }
          @keyframes hero-line-in { from { opacity: 0; transform: translateY(50px); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); } }
          .reveal-text.visible { opacity: 1; transform: translateY(0); }
 
@@ -497,6 +454,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          }
          .hero-signal::before { content: ''; width: 0.45rem; height: 0.45rem; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); animation: signal-pulse 2.4s ease-in-out infinite; }
          @keyframes signal-pulse { 50% { box-shadow: 0 0 0 0.55rem rgba(245,166,35,0); } }
+         .hero .hero-scan { position: absolute; top: 7.2rem; right: 8rem; z-index: 1; opacity: 0.8; }
 
         .hero-sub {
           display: grid;
@@ -600,7 +558,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-size: clamp(3rem, 7vw, 6rem);
           font-weight: 800;
           letter-spacing: -0.04em;
-          color: rgba(255,255,255,0.06);
+          color: rgba(255,255,255,0.36);
           line-height: 1;
         }
 
@@ -636,57 +594,26 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .project-row:hover { background: var(--surface); }
         .project-row:hover::after { width: 100%; }
         .project-row:hover .project-title { color: var(--amber); }
-        .project-row:hover .project-arrow { transform: rotate(-45deg) translate(4px,-4px); }
          .project-row:hover .project-num { color: var(--amber); }
          .project-row[aria-expanded="true"] { background: var(--surface); }
          .project-row[aria-expanded="true"] .project-title,
          .project-row[aria-expanded="true"] .project-num { color: var(--amber); }
+         .project-row[aria-expanded="true"]::after { width: 100%; }
+         .project-row:focus-visible { outline: 2px solid var(--amber); outline-offset: -3px; }
+         .project-toggle { position: relative; display: inline-block; width: 1.2rem; height: 1.2rem; flex: 0 0 1.2rem; color: var(--muted); transition: color 250ms ease; }
+         .project-toggle::before, .project-toggle::after { position: absolute; top: 50%; left: 10%; width: 80%; height: 1px; background: currentColor; content: ''; transition: transform 400ms var(--ease-expo), opacity 250ms ease; }
+         .project-toggle::after { transform: rotate(90deg); }
+         .project-row[aria-expanded="true"] .project-toggle { color: var(--amber); }
+         .project-row[aria-expanded="true"] .project-toggle::after { transform: rotate(0); opacity: 0; }
          .project-details {
            display: grid;
            grid-template-rows: 0fr;
-           transition: grid-template-rows 0.45s var(--ease-expo), opacity 0.3s ease;
+           overflow: hidden;
+           transition: grid-template-rows 0.55s var(--ease-expo), opacity 0.35s ease;
            opacity: 0;
-           border-bottom: 1px solid var(--border);
          }
          .project-details[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
-         .project-details > div { overflow: hidden; }
-         .project-description {
-           margin: -0.5rem 4.5rem 1.5rem 6rem;
-           color: var(--muted);
-           font-size: 0.9rem;
-           line-height: 1.7;
-           max-width: 48rem;
-         }
-         .project-open-link {
-           color: var(--amber);
-           font-family: 'JetBrains Mono', monospace;
-           font-size: 0.65rem;
-           letter-spacing: 0.12em;
-           text-transform: uppercase;
-           text-decoration: none;
-         }
-         .project-open-link:hover { text-decoration: underline; }
-         .project-preview {
-           position: fixed;
-           top: 0;
-           left: 0;
-           z-index: 70;
-           width: min(22rem, 34vw);
-           pointer-events: none;
-           opacity: 0;
-           transform: translate3d(var(--preview-x, 2rem), var(--preview-y, 2rem), 0) rotate(3deg) scale(0.92);
-           transform-origin: center;
-           transition: opacity 220ms ease, transform 320ms var(--ease-expo);
-         }
-         .project-preview[data-visible="true"] { opacity: 1; transform: translate3d(var(--preview-x, 2rem), var(--preview-y, 2rem), 0) rotate(-3deg) scale(1); }
-         .project-preview-frame { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border: 1px solid rgba(245,166,35,0.5); background: var(--surface); box-shadow: 1rem 1rem 0 rgba(245,166,35,0.08), 0 1.5rem 3rem rgba(0,0,0,0.45); }
-         .project-preview-frame::after { content: ''; position: absolute; inset: 0; background: linear-gradient(130deg, transparent 35%, rgba(245,166,35,0.2), transparent 65%); transform: translateX(-100%); animation: preview-scan 2.4s ease-in-out infinite; }
-         @keyframes preview-scan { 55%, 100% { transform: translateX(100%); } }
-         .project-preview img { width: 100%; height: 100%; display: block; object-fit: cover; opacity: 0.78; filter: saturate(0.6) contrast(1.15); }
-         .project-preview-placeholder { display: grid; place-items: center; width: 100%; height: 100%; color: var(--amber); background: radial-gradient(circle at 50% 35%, rgba(245,166,35,0.22), transparent 32%), repeating-linear-gradient(135deg, transparent 0 0.7rem, rgba(255,255,255,0.04) 0.7rem 0.75rem); font-family: 'Syne', sans-serif; font-size: 6rem; font-weight: 800; letter-spacing: -0.08em; }
-         .project-preview-copy { padding: 0.8rem 0.9rem; border: 1px solid rgba(245,166,35,0.35); border-top: 0; background: rgba(12,12,12,0.95); }
-         .project-preview-kicker { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; letter-spacing: 0.14em; text-transform: uppercase; }
-         .project-preview-title { display: block; margin-top: 0.35rem; color: var(--white); font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700; line-height: 1.1; }
+         .project-details > div { min-height: 0; overflow: hidden; }
 
          /* ── About and skills ─────────────────────────────────────── */
          .about-section, .skills-section { padding: 6rem 4rem; }
@@ -704,7 +631,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          .skill-name { font-family: 'Syne', sans-serif; font-weight: 700; }
          .skill-level { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
 
-        .project-left { display: flex; align-items: center; gap: 2.5rem; flex: 1; }
+        .project-left { display: flex; align-items: center; gap: 2.5rem; flex: 1; min-width: 0; }
         .project-num {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.7rem;
@@ -719,6 +646,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           letter-spacing: -0.02em;
           transition: color 0.4s var(--ease-expo);
           line-height: 1.1;
+          overflow-wrap: anywhere;
         }
         .project-tags {
           display: flex; gap: 0.6rem; flex-wrap: wrap;
@@ -733,7 +661,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           padding: 0.2rem 0.6rem;
         }
         .project-meta {
-          display: flex; align-items: center; gap: 2rem; flex-shrink: 0;
+          display: flex; align-items: center; gap: 2rem; flex-shrink: 0; margin-left: 1.5rem;
         }
         .project-year {
           font-family: 'JetBrains Mono', monospace;
@@ -754,6 +682,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           border: 1px solid var(--border);
         }
         .service-card {
+          position: relative;
           padding: 3rem;
           border: 1px solid var(--border);
           margin: -1px 0 0 -1px;
@@ -761,15 +690,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           cursor: none;
         }
         .service-card:hover { background: var(--surface); }
+        .service-card::before { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--amber); transform: scaleX(0); transform-origin: left; transition: transform 550ms var(--ease-expo); content: ''; }
+        .service-card:hover::before { transform: scaleX(1); }
         .service-card:hover .service-explore { color: var(--amber); }
         .service-icon {
           font-size: 2rem;
           color: var(--muted);
           margin-bottom: 1.5rem;
           display: block;
-          transition: color 0.3s ease;
+          transition: color 0.3s ease, transform 0.5s var(--ease-expo);
         }
-        .service-card:hover .service-icon { color: var(--amber); }
+        .service-card:hover .service-icon { color: var(--amber); transform: translateY(-5px) rotate(-8deg); }
         .service-title {
           font-family: 'Syne', sans-serif;
           font-size: 1.3rem;
@@ -849,6 +780,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
         /* ── Contact ───────────────────────────────────────────────── */
          .contact-section { padding: 6rem 4rem 8rem; }
+         .contact-scan { margin: 0 0 2.5rem auto; opacity: 0.72; }
         .contact-headline {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
@@ -862,6 +794,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-style: italic;
           color: var(--amber);
         }
+        .contact-line { display: block; }
+        .contact-headline.visible .contact-line { animation: contact-line-reveal 850ms var(--ease-expo) both; animation-delay: var(--line-delay, 0ms); }
+        @keyframes contact-line-reveal { from { clip-path: inset(0 0 100% 0); transform: translateY(20px); } to { clip-path: inset(0); transform: translateY(0); } }
         .contact-email {
           font-family: 'Syne', sans-serif;
           font-size: clamp(1.1rem, 2.5vw, 2rem);
@@ -920,6 +855,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
         /* ── Responsive ────────────────────────────────────────────── */
          @media (max-width: 900px) {
+           #ed-cursor { display: none; }
+           .editorial-root, .project-row, .service-card, .btn-solid, .btn-ghost { cursor: auto; }
           #main-nav { padding: 1.25rem 1.5rem; }
            .nav-links, .nav-available { display: none; }
            .mobile-menu-toggle { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0; border: 0; background: transparent; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
@@ -944,8 +881,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           .ed-footer { flex-direction: column; gap: 1rem; padding: 1.5rem; text-align: center; }
            .project-tags { display: none; }
            .about-grid { grid-template-columns: 1fr; gap: 2rem; }
-           .project-description { margin-left: 1.5rem; margin-right: 1.5rem; }
            .hero-signal { left: 1.5rem; }
+           .hero .hero-scan { top: 7.2rem; right: 1.5rem; transform: scale(0.72); transform-origin: right center; }
            .hero::after { right: -18rem; top: 20%; }
            .hero-headline { font-size: clamp(2.55rem, 11.5vw, 4.8rem); letter-spacing: -0.07em; line-height: 0.86; overflow-wrap: normal; }
            .hero { min-height: auto; padding-top: 9.5rem; padding-bottom: 3rem; }
@@ -966,12 +903,20 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
          @media (min-width: 901px) and (max-width: 1400px) {
            .hero-headline { font-size: clamp(3.75rem, 10vw, 8rem); }
          }
+         @media (max-width: 680px) {
+           .project-row { padding: 1.4rem 0.75rem; align-items: flex-start; gap: 1rem; }
+           .project-left { gap: 0.75rem; }
+           .project-num { min-width: 1.4rem; padding-top: 0.25rem; }
+           .project-title { font-size: 1.15rem; line-height: 1.25; }
+           .project-meta { margin-left: 0; gap: 0.7rem; padding-top: 0.25rem; }
+           .project-year { display: none; }
+         }
 
          @media (pointer: coarse) { .editorial-root, .project-row, .service-card { cursor: auto; } #ed-cursor { display: none; } }
          @media (prefers-reduced-motion: reduce) {
            *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
            .marquee-track { transform: none !important; }
-           .hero::after, .hero-signal::before, .project-preview-frame::after { animation: none; }
+           .hero::after, .hero-signal::before { animation: none; }
            .reveal-text { animation: none; }
            .mobile-menu { animation: none; }
          }
@@ -1006,8 +951,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
        </nav>
        {mobileMenuOpen && (
          <div id="mobile-menu" className="mobile-menu">
-           {chapterItems
-             .filter(({ id }) => id !== "home")
+           {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id))
              .map((item, index) => (
                <a
                  key={item.id}
@@ -1022,15 +966,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
            <p className="mobile-menu-meta">AI systems / voice / retrieval / agents</p>
          </div>
        )}
-       <ChapterIndicator items={chapterItems} activeId={activeChapter} />
-
-      {orderedSections.map((section) => (
+       {orderedSections.map((section) => (
         <Fragment key={section.id}>
           {/* ── Hero ─────────────────────────────────────────────────── */}
           {section.id === "hero" && (
             <>
       <section id="home" className="hero ed-container">
         <div className="hero-signal" aria-hidden="true">Live signal / portfolio 01</div>
+        <AmbientScan className="hero-scan" />
         <div className="matrix-rain" aria-hidden="true">
           {MATRIX_COLUMNS.map((column, index) => (
             <span
@@ -1139,9 +1082,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
                    type="button"
                    className="project-row"
                    aria-expanded={isOpen}
-                   onPointerEnter={() => setPreviewProject(p)}
-                   onPointerMove={handleProjectPointerMove}
-                   onPointerLeave={() => setPreviewProject(null)}
+                   aria-controls={`project-panel-${p.num}`}
                    onClick={() => setOpenProject(isOpen ? null : p.num)}
                 >
                   <div className="project-left">
@@ -1153,17 +1094,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
                   </div>
                   <div className="project-meta">
                     <span className="project-year">{p.year}</span>
-                    <span className="material-symbols-outlined project-arrow" style={{ fontSize: "1.5rem" }}>{isOpen ? "remove" : "add"}</span>
+                    <span className="project-toggle" aria-hidden="true" />
                   </div>
                 </button>
-                <div className="project-details" data-open={isOpen}>
-                  <div>
-                    <p className="project-description">{p.desc}</p>
-                    <p className="project-description" style={{ marginTop: "-0.75rem" }}>
-                      <a href={p.url} target="_blank" rel="noreferrer" className="project-open-link">Open project ↗</a>
-                    </p>
-                  </div>
-                </div>
+                 <div id={`project-panel-${p.num}`} className="project-details" data-open={isOpen} aria-hidden={!isOpen} inert={!isOpen}>
+                   <div>
+                     <ProjectDetail
+                       project={p}
+                       open={isOpen}
+                       image={galleryImages.length > 0 ? galleryImages[i % galleryImages.length] : undefined}
+                     />
+                   </div>
+                 </div>
               </div>
             );
           })}
@@ -1270,14 +1212,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {section.id === "contact" && (
             <>
       <section id="contact" className="contact-section ed-container">
+        <AmbientScan className="contact-scan" />
         <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>{contact.label}</p>
 
         <h2 className="contact-headline scroll-fade delay-1">
           {contact.headline.map((line, i) => (
-            <Fragment key={i}>
-              {i > 0 && <br />}
+            <span key={i} className="contact-line" style={{ "--line-delay": `${i * 110}ms` } as CSSProperties}>
               {i === contact.headline.length - 1 ? <em>{line}</em> : line}
-            </Fragment>
+            </span>
           ))}
         </h2>
 
@@ -1311,29 +1253,6 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         <p className="footer-copy">{content.footer.copyright}</p>
         <p className="footer-copy">{content.footer.credit}</p>
       </footer>
-      {previewProject && (
-        <div
-          ref={projectPreviewRef}
-          className="project-preview"
-          data-visible="true"
-          aria-hidden="true"
-        >
-          <div className="project-preview-frame">
-            {galleryImages.length > 0 ? (
-              <img
-                src={galleryImages[projects.items.indexOf(previewProject) % galleryImages.length].src}
-                alt=""
-              />
-            ) : (
-              <div className="project-preview-placeholder">{previewProject.num}</div>
-            )}
-          </div>
-          <div className="project-preview-copy">
-            <span className="project-preview-kicker">Project signal / {previewProject.year}</span>
-            <strong className="project-preview-title">{previewProject.title}</strong>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

@@ -59,8 +59,8 @@ export function ProjectGallery({
       <style>{`
         .pg-section { position: relative; padding: 4rem 0 2rem; }
         .pg-head { text-align: center; margin-bottom: 1rem; }
-        .pg-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); opacity: 0.7; }
-        .pg-hint { display: flex; justify-content: center; align-items: center; gap: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); opacity: 0.5; margin: 0.75rem 0 0; }
+        .pg-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); }
+        .pg-hint { display: flex; justify-content: center; align-items: center; gap: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin: 0.75rem 0 0; }
         .pg-stack { position: relative; }
         .pg-slot { height: 100vh; height: 100svh; display: flex; align-items: center; justify-content: center; position: sticky; top: 0; }
         .pg-card { position: relative; width: min(1120px, calc(100vw - 2.5rem)); max-height: 82vh; max-height: 82svh; aspect-ratio: 16 / 10; border-radius: 1.5rem; background: #101013; transform-origin: top center; will-change: transform; padding: 10px; border: 1px solid rgba(255,255,255,0.10); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.65), 0 18px 50px rgba(0,0,0,0.45); }
