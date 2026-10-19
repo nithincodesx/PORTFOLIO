@@ -11,7 +11,12 @@ export type WordsPreloaderProps = {
   words?: string[];
 };
 
-const DEFAULT_WORDS = ["ഹലോ", "HELLO", "NAMASKARAM", "AI ENGINEER", "LANDING PAGE", "NK."];
+/* Exact SpaceUI words — plus Malayalam. Last word stays short ("NK.")
+   so the curved wipe launches from a tight label, like the original. */
+const DEFAULT_WORDS = [
+  'ഹലോ', 'Hello', 'bonjour', 'നമസ്കാരം', 'Ciao', 'Olà',
+  'സ്വാഗതം', 'やあ', 'Hallå', 'Guten tag', 'നന്ദി', 'NK.',
+];
 
 export function WordsPreloader({
   children,
