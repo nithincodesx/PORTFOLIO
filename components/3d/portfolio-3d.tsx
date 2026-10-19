@@ -476,18 +476,31 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         /* 3D hero layers */
         .hero-tilt { transform-style: preserve-3d; will-change: transform; }
         .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
-        .hero-orb { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; }
+        .hero { overflow: clip; }
+        .hero-orb { position: absolute; border-radius: 999px; filter: blur(110px); pointer-events: none; z-index: 0; }
         .hero-orb-a {
-          width: 34rem; height: 34rem; top: -8rem; right: -6rem;
-          background: radial-gradient(circle, rgba(245,166,35,0.20), transparent 65%);
+          width: min(52vw, 46rem); height: min(52vw, 46rem);
+          top: -14rem; right: -14rem;
+          background:
+            radial-gradient(closest-side, rgba(245,166,35,0.28), rgba(245,166,35,0.08) 55%, transparent 72%);
           mix-blend-mode: screen;
           animation: float 7s ease-in-out infinite;
         }
         .hero-orb-b {
-          width: 26rem; height: 26rem; bottom: 6rem; left: -8rem;
-          background: radial-gradient(circle, rgba(91,255,143,0.10), transparent 65%);
+          width: min(44vw, 38rem); height: min(44vw, 38rem);
+          bottom: -10rem; left: -12rem;
+          background:
+            radial-gradient(closest-side, rgba(91,255,143,0.14), rgba(91,255,143,0.05) 55%, transparent 72%);
           mix-blend-mode: screen;
           animation: float 9s ease-in-out infinite reverse;
+        }
+        .hero-orb-c {
+          width: min(30vw, 26rem); height: min(30vw, 26rem);
+          top: 30%; left: 55%;
+          background:
+            radial-gradient(closest-side, rgba(245,166,35,0.10), transparent 70%);
+          mix-blend-mode: screen;
+          animation: float 11s ease-in-out infinite;
         }
 
         /* Text reveal */
@@ -1069,6 +1082,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
         <motion.div className="hero-orb hero-orb-a" aria-hidden="true" style={{ x: orbX, y: orbY }} />
         <motion.div className="hero-orb hero-orb-b" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }} />
+        <motion.div className="hero-orb hero-orb-c" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }} />
         <AmbientScan className="hero-scan" />
         <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
