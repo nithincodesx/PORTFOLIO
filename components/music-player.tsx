@@ -108,10 +108,10 @@ export function MusicPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
     try {
-      if (audio.paused) { await startPlayback(); }
+      if (audio.paused) { await startAudible(); }
       else { audio.pause(); setPlaying(false); }
     } catch { /* blocked — unlock listeners will retry on next gesture */ }
-  }, [startPlayback]);
+  }, [startAudible]);
 
   /* No music bar on the admin panel; respect the "enabled" toggle too. */
   if (pathname.startsWith("/control") || !music.enabled || unavailable) return null;
