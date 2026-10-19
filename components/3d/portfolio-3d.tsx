@@ -1,6 +1,13 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  useScroll,
+} from "framer-motion";
 
 import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
@@ -44,8 +51,33 @@ const MATRIX_COLUMNS = [
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
   const cursorRef = useRef<HTMLDivElement>(null);
+
+  /* While the fullscreen words intro plays, keep the nav + custom cursor
+     hidden so only the loader words are visible. They fade in with the wipe. */
+  const [introDone, setIntroDone] = useState(false);
+
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
+
+  /* 3D hero: mouse parallax + scroll dive */
+  const heroRef = useRef<HTMLElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 55, damping: 18, mass: 0.6 });
+  const sy = useSpring(my, { stiffness: 55, damping: 18, mass: 0.6 });
+  const tiltX = useTransform(sy, [-0.5, 0.5], [7, -7]);
+  const tiltY = useTransform(sx, [-0.5, 0.5], [-9, 9]);
+  const layerBgX = useTransform(sx, [-0.5, 0.5], [12, -12]);
+  const layerBgY = useTransform(sy, [-0.5, 0.5], [10, -10]);
+  const layerFgX = useTransform(sx, [-0.5, 0.5], [-26, 26]);
+  const layerFgY = useTransform(sy, [-0.5, 0.5], [-20, 20]);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.92]);
+  const heroRotX = useTransform(scrollYProgress, [0, 1], [0, 8]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
 
   /* Editable content + section visibility/order from Firebase (falls back to
      the shipped defaults until/unless the Firestore document loads). */
