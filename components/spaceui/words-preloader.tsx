@@ -50,6 +50,16 @@ export function WordsPreloader({
   }, [fullscreen, isLoading]);
 
 
+  if (fullscreen) {
+    return (
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <PreloaderContent key="words-preloader" words={words} fullscreen />
+        ) : null}
+      </AnimatePresence>
+    );
+  }
+
   return (
     <>
       <style>{`
