@@ -133,6 +133,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
 
+    /* ── 3D hero mouse tracking (drives parallax + tilt springs) ── */
+    const heroEl = heroRef.current;
+    const trackHeroMouse = (e: MouseEvent) => {
+      if (!heroEl || !finePointer || reduceMotion) return;
+      const rect = heroEl.getBoundingClientRect();
+      mx.set((e.clientX - rect.left) / rect.width - 0.5);
+      my.set((e.clientY - rect.top) / rect.height - 0.5);
+    };
+    const resetHeroMouse = () => { mx.set(0); my.set(0); };
+    heroEl?.addEventListener("mousemove", trackHeroMouse);
+    heroEl?.addEventListener("mouseleave", resetHeroMouse);
+
     /* ── Navbar hide on scroll down ── */
     let lastY = 0;
     const nav = document.getElementById("main-nav");
@@ -163,6 +175,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
     return () => {
       window.removeEventListener("mousemove", moveCursor);
       window.removeEventListener("scroll", handleScroll);
+      heroEl?.removeEventListener("mousemove", trackHeroMouse);
+      heroEl?.removeEventListener("mouseleave", resetHeroMouse);
       hoverables.forEach((el) => {
         el.removeEventListener("mouseenter", enterHover);
         el.removeEventListener("mouseleave", leaveHover);
