@@ -174,7 +174,10 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
 
   return (
     <main className="editorial-root">
-      <WordsPreloader duration={2200} />
+      <WordsPreloader
+        duration={6500}
+        words={["ഹലോ", "HELLO", "NAMASKARAM", "AI ENGINEER", "LANDING PAGE", "NK."]}
+      />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
