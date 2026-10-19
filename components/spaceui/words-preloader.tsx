@@ -1,6 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export type WordsPreloaderProps = {
   children?: ReactNode;
