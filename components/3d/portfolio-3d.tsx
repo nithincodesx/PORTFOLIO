@@ -1020,7 +1020,12 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           {/* ── Hero ─────────────────────────────────────────────────── */}
           {section.id === "hero" && (
             <>
-      <section id="home" className="hero ed-container">
+      <motion.section
+        id="home"
+        ref={heroRef}
+        className="hero ed-container"
+        style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
+      >
         <div className="hero-signal" aria-hidden="true">Live signal / portfolio 01</div>
         <AmbientScan className="hero-scan" />
         <div className="matrix-rain" aria-hidden="true">
@@ -1061,7 +1066,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
             </>
           )}
           {section.id === "hero" && section.dividerAfter && <div className="divider" />}
