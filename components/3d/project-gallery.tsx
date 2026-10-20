@@ -42,15 +42,25 @@ function GalleryStack({ images }: { images: GalleryImage[] }) {
     </div>
   );
 }
-export function ProjectGallery({ images }: { images: GalleryImage[] }) {
+export function ProjectGallery({
+  images,
+  label = "— Project Gallery",
+  title = "Project Gallery",
+  hint = "Scroll to stack ↓",
+}: {
+  images: GalleryImage[];
+  label?: string;
+  title?: string;
+  hint?: string;
+}) {
   if (images.length === 0) return null;
   return (
     <section className="pg-section">
       <style>{`
         .pg-section { position: relative; padding: 4rem 0 2rem; }
         .pg-head { text-align: center; margin-bottom: 1rem; }
-        .pg-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); opacity: 0.7; }
-        .pg-hint { display: flex; justify-content: center; align-items: center; gap: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); opacity: 0.5; margin: 0.75rem 0 0; }
+        .pg-label { font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); }
+        .pg-hint { display: flex; justify-content: center; align-items: center; gap: 0.6rem; font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin: 0.75rem 0 0; }
         .pg-stack { position: relative; }
         .pg-slot { height: 100vh; height: 100svh; display: flex; align-items: center; justify-content: center; position: sticky; top: 0; }
         .pg-card { position: relative; width: min(1120px, calc(100vw - 2.5rem)); max-height: 82vh; max-height: 82svh; aspect-ratio: 16 / 10; border-radius: 1.5rem; background: #101013; transform-origin: top center; will-change: transform; padding: 10px; border: 1px solid rgba(255,255,255,0.10); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(0,0,0,0.65), 0 18px 50px rgba(0,0,0,0.45); }
@@ -61,14 +71,14 @@ export function ProjectGallery({ images }: { images: GalleryImage[] }) {
         @keyframes pg-spin { to { --pg-angle: 360deg; } }
         .pg-imgwrap { position: absolute; inset: 10px; border-radius: calc(1.5rem - 10px); overflow: hidden; background: #0a0a0c; }
         .pg-imgwrap img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; pointer-events: none; }
-        .pg-count { position: absolute; left: 1.25rem; bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--white); background: rgba(12,12,12,0.65); border: 1px solid rgba(255,255,255,0.16); padding: 0.35rem 0.7rem; border-radius: 999px; }
+         .pg-count { position: absolute; left: 1.25rem; bottom: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.15em; color: var(--white); background: rgba(12,12,12,0.92); border: 1px solid rgba(255,255,255,0.22); padding: 0.35rem 0.7rem; border-radius: 999px; }
         @media (max-width: 640px) { .pg-card { width: calc(100vw - 1.5rem); max-height: 74svh; border-radius: 1.1rem; padding: 8px; } .pg-imgwrap { inset: 8px; border-radius: calc(1.1rem - 8px); } }
         @media (prefers-reduced-motion: reduce) { .pg-card.is-active .pg-sheen { animation: none; opacity: 0.35; } }
       `}</style>
       <div className="pg-head scroll-fade">
-        <p className="section-label" style={{ textAlign: "center" }}>— Project Gallery</p>
-        <p className="pg-label">Project Gallery</p>
-        <p className="pg-hint">Scroll to stack ↓</p>
+        <p className="section-label" style={{ textAlign: "center" }}>{label}</p>
+        <p className="pg-label">{title}</p>
+        <p className="pg-hint">{hint}</p>
       </div>
       <GalleryStack images={images} />
     </section>

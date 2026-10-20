@@ -1,39 +1,99 @@
-# Nithin Krishna AI Engineer Portfolio
+# Nithin Krishna | AI Engineer
 
-Premium light-themed portfolio built with Next.js 15, React 19, TypeScript, Tailwind CSS, Framer Motion, Three.js, React Three Fiber, and Drei.
+Dark editorial portfolio built with Next.js 15 App Router, React 19, TypeScript,
+Tailwind CSS, Framer Motion, Lenis, and Firebase-backed content editing.
 
-## Features
+## Requirements
 
-- Studio-style hero on a dark cloud backdrop with a macOS browser frame, inside which a mini landing page hosts a live 3D AI orb (rings, sparkles, floating geometry).
-- Alternating light/dark sections with oversized watermark typography.
-- Numbered, expandable **Work** list, accordion **Service** rows, and a table-style **Experience** section.
-- Contact section with credentials, socials, résumé download, and a direct email CTA.
-- Lazy-loaded 3D scene — the Three.js bundle is split out so first paint stays fast (~155 kB First Load JS).
-- Responsive, typed, and componentized App Router architecture.
+- Node.js `22.14.0` (see `.nvmrc`)
+- npm
 
-## Run Locally
+## Run locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open <http://localhost:3000>. The public portfolio is served at `/`; `/3d` is
+kept as a legacy alias.
 
-## GitHub Contribution Calendar
+Development writes to `.next-dev/`; production builds use `.next/`. This keeps
+`npm run build` from corrupting a running development preview.
 
-The hero renders a live, GitHub-style contribution calendar for the account in
-`GITHUB_USERNAME` (defaults to `nithincodesx`).
+The top navigation is the single section index (a Menu button on mobile).
+Click a project row to reveal its description and inline image; moving the
+pointer does not open or dismiss project images. Motion respects the visitor's
+reduced-motion preference.
 
-- Data is fetched **server-side** from `app/api/contributions`, so no token is
-  ever exposed to the browser.
-- Out of the box it uses GitHub's public contributions page (no auth). Set
-  `GITHUB_TOKEN` (server-side only — see `.env.example`) to use the official
-  GraphQL API instead.
-- Results are cached for 24 hours (server memory + browser `localStorage`), so
-  GitHub is never polled continuously. New contributions appear automatically
-  within a day — no code edit or redeploy required.
+## Checks
 
-## Customize
+```bash
+npm run lint       # TypeScript check
+npm run build      # Production build
+make test          # Offline-friendly project test command
+```
 
-Update portfolio content in `lib/portfolio-data.ts` and the data types in `types/portfolio.ts`. Replace placeholder links, email, GitHub, LinkedIn, and `/resume.pdf` with your real assets when ready.
+The repository includes a Dockerfile for a clean production build:
+
+```bash
+docker build -t nithin-portfolio .
+docker run --rm -p 3000:3000 --env-file .env.local nithin-portfolio
+```
+
+## Configuration
+
+Copy `.env.example` to `.env.local`. The public site works with no Firebase
+configuration because it always falls back to `lib/cms/defaults.ts`.
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Production origin for canonical, sitemap, and OG URLs |
+| `GITHUB_USERNAME` | Account used by the contribution calendar |
+| `GITHUB_TOKEN` | Optional server-only GitHub GraphQL token |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase web app configuration |
+| `NEXT_PUBLIC_ADMIN_EMAILS` | Comma-separated control-panel allowlist |
+
+Never put server tokens or provider secrets in `NEXT_PUBLIC_*` variables.
+
+## Content and CMS
+
+The shipped content lives in `lib/cms/defaults.ts`. When Firebase is configured,
+the public page reads `siteConfig/main` and deep-merges it over those defaults.
+The private editor is available at `/control` and is intentionally not linked
+from the public site, marked `noindex`, and disallowed in `robots.txt`.
+
+Registered editors live in `lib/cms/registry.tsx`; each editor writes only its
+own top-level configuration key. The public page renders sections in the order
+stored in `config.sections`, including About and Skills.
+
+Project gallery images are auto-detected from `public/project-gallery/` during
+the build. Add cleanly named `.png`, `.jpg`, `.webp`, `.gif`, `.avif`, or `.svg`
+files there before deploying.
+
+## Firebase rules
+
+After Firebase Authentication and Firestore are configured:
+
+```bash
+firebase login
+firebase use portfolio-1f115
+firebase deploy --only firestore:rules
+```
+
+Keep the admin email in `firestore.rules` synchronized with
+`NEXT_PUBLIC_ADMIN_EMAILS`.
+
+## Deployment
+
+Set the variables from `.env.example` in the hosting provider, then run:
+
+```bash
+npm ci
+npm run build
+npm run start
+```
+
+The sitemap, robots policy, app icon, and Open Graph asset are generated from
+`app/sitemap.ts`, `app/robots.ts`, `app/icon.svg`, and
+`public/opengraph-image.svg`.

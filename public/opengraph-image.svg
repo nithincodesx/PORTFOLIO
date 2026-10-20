@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Nithin — AI Engineer</title>
+  <desc id="desc">Building voice AI, autonomous agents, and reliable RAG systems.</desc>
+  <rect width="1200" height="630" fill="#0C0C0C"/>
+  <circle cx="1040" cy="-20" r="300" fill="#F5A623" opacity="0.14"/>
+  <circle cx="1100" cy="560" r="220" fill="#F5A623" opacity="0.08"/>
+  <path d="M80 510H1120" stroke="#F5A623" stroke-width="2" opacity="0.45"/>
+  <text x="80" y="150" fill="#F5A623" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="5">AI ENGINEER</text>
+  <text x="80" y="300" fill="#F7F3EA" font-family="Arial, Helvetica, sans-serif" font-size="110" font-weight="700" letter-spacing="-5">NITHIN</text>
+  <text x="80" y="385" fill="#F7F3EA" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="400" letter-spacing="-2">Voice AI · Agents · RAG</text>
+  <text x="80" y="565" fill="#F5A623" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700">NITHIN KRISHNA</text>
+</svg>

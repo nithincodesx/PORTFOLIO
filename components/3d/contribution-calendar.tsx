@@ -322,7 +322,7 @@ export function ContributionCalendar() {
                 key={cell.date}
                 className="gh-cell gh-cell--live"
                 data-level={level}
-                aria-label={`${summary} on ${fullDateLabel(cell.date)}`}
+                title={`${summary} on ${fullDateLabel(cell.date)}`}
                 onMouseEnter={(event) => {
                   const el = event.currentTarget;
                   setHover({

@@ -1,9 +1,22 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  useScroll,
+} from "framer-motion";
 
+import { useSiteConfig } from "@/components/cms/site-config-provider";
 import { ContributionCalendar } from "@/components/3d/contribution-calendar";
 import { ProjectGallery, type GalleryImage } from "@/components/3d/project-gallery";
+import { AmbientScan } from "@/components/motion/ambient-scan";
+import { MagneticButton } from "@/components/motion/magnetic-button";
+import { ProjectDetail } from "@/components/motion/project-detail";
+import { WordsPreloader } from "@/components/spaceui/words-preloader";
+import type { RenderableSectionId } from "@/lib/cms/types";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    OBSIDIAN EDITORIAL PORTFOLIO
@@ -13,95 +26,18 @@ import { ProjectGallery, type GalleryImage } from "@/components/3d/project-galle
    Accent: #F5A623 amber
 ───────────────────────────────────────────────────────────────────────────── */
 
-const PROJECTS = [
-  {
-    num: "01",
-    title: "Verified-Hybrid-Multi-Agent-RAG-System",
-    tags: ["Retrieval", "Vector DB", "Agents"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Verified-Hybrid-Multi-Agent-RAG-System-v1",
-    desc: "Hybrid BM25 + vector RAG with a verification agent that validates every claim — reducing hallucinations by 94%.",
-  },
-  {
-    num: "02",
-    title: "AI-Agile-Retrospective-Facilitator",
-    tags: ["LLM", "Workflow"],
-    year: "2025",
-    href: "https://github.com/nithincodesx/AI-Agile-Retrospective-Facilitator",
-    desc: "AI facilitator that surfaces emotional bottlenecks in Agile sprints using sentiment and commit velocity.",
-  },
-  {
-    num: "03",
-    title: "Coraxis",
-    tags: ["Autonomous Agents", "FastAPI", "Python"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Coraxis",
-    desc: "Four specialised agents research a topic end to end — decompose, search, cross-check sources, and hand back a cited report, streamed live.",
-  },
-  {
-    num: "04",
-    title: "CloudPulse-AI",
-    tags: ["Python", "Supabase", "Analytics"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/CloudPulse-AI",
-    desc: "SaaS-style infrastructure dashboard that turns real-time telemetry into server utilization and cost-saving signals.",
-  },
-  {
-    num: "05",
-    title: "Cozy-Coffee-v1",
-    tags: ["Next.js", "Supabase", "TypeScript"],
-    year: "2026",
-    href: "https://github.com/nithincodesx/Cozy-Coffee-v1",
-    desc: "A full-stack community for coffee lovers — share favourite brews, review cafes on an interactive map, and hold rich-text forum discussions.",
-  },
-];
+/* All editable content (projects, services, experience, hero, …) now lives in
+   SiteConfig — see lib/cms/defaults.ts for the shipped defaults and
+   /control to edit it. The hardcoded arrays that used to live here moved to
+   DEFAULT_SITE_CONFIG so there is a single source of truth. */
 
-const SERVICES = [
-  {
-    icon: "mic",
-    title: "Voice AI & Autonomous Agents",
-    desc: "Voice interfaces, tool-using agents, and multi-step planning loops that reason and self-verify.",
-  },
-  {
-    icon: "lan",
-    title: "RAG & Reliable Retrieval",
-    desc: "Hybrid BM25 + dense vector retrieval with an independent claim-verification agent layer.",
-  },
-  {
-    icon: "visibility",
-    title: "Computer Vision Prototypes",
-    desc: "Detection, segmentation, and OCR pipelines — shipped as clean, monitored APIs.",
-  },
-  {
-    icon: "rocket_launch",
-    title: "Full-Stack AI Products",
-    desc: "End-to-end builds: Next.js frontends, FastAPI services, Supabase, Docker, and CI/CD.",
-  },
-];
-
-const EXPERIENCE = [
-  {
-    period: "2024 â€” Present",
-    role: "AI Engineer",
-    company: "Independent Projects",
-    location: "Remote",
-    stack: ["LLMs", "LangChain", "RAG", "Python"],
-  },
-  {
-    period: "2023 â€” 2024",
-    role: "Full-Stack Developer",
-    company: "Applied AI Labs",
-    location: "Remote",
-    stack: ["Next.js", "FastAPI", "Supabase"],
-  },
-  {
-    period: "2022 â€” 2023",
-    role: "ML Builder",
-    company: "Research & Experiments",
-    location: "India",
-    stack: ["Python", "PyTorch", "OpenCV"],
-    summary: "Built and evaluated computer-vision and NLP prototypes, then translated experiments into clear, interactive demos.",
-  },
+const NAV_LINKS: { id: RenderableSectionId; label: string }[] = [
+  { id: "about", label: "About" },
+  { id: "work", label: "Work" },
+  { id: "services", label: "Service" },
+  { id: "experience", label: "Experience" },
+  { id: "skills", label: "Skills" },
+  { id: "contact", label: "Contact" },
 ];
 
 const MATRIX_COLUMNS = [
@@ -114,11 +50,49 @@ const MATRIX_COLUMNS = [
 ];
 
 export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: GalleryImage[] }) {
+  /* While the fullscreen words intro plays, keep the nav + custom cursor
+     hidden so only the loader words are visible. They fade in with the wipe. */
+  const [introDone, setIntroDone] = useState(false);
   const cursorRef = useRef<HTMLDivElement>(null);
+
+  /* ── 3D hero: mouse parallax + scroll dive ── */
+  const heroRef = useRef<HTMLElement>(null);
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const sx = useSpring(mx, { stiffness: 55, damping: 18, mass: 0.6 });
+  const sy = useSpring(my, { stiffness: 55, damping: 18, mass: 0.6 });
+  const tiltX = useTransform(sy, [-0.5, 0.5], [7, -7]);
+  const tiltY = useTransform(sx, [-0.5, 0.5], [-9, 9]);
+  const layerBgX = useTransform(sx, [-0.5, 0.5], [12, -12]);
+  const layerBgY = useTransform(sy, [-0.5, 0.5], [10, -10]);
+  const layerFgX = useTransform(sx, [-0.5, 0.5], [-26, 26]);
+  const layerFgY = useTransform(sy, [-0.5, 0.5], [-20, 20]);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  const heroScale = useTransform(scrollYProgress, [0, 1], [1, 0.92]);
+  const heroRotX = useTransform(scrollYProgress, [0, 1], [0, 8]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.85], [1, 0]);
   const buttonsRef = useRef<HTMLDivElement>(null);
   const statsRef = useRef<HTMLDivElement>(null);
 
+  /* Editable content + section visibility/order from Firebase (falls back to
+     the shipped defaults until/unless the Firestore document loads). */
+  const { config } = useSiteConfig();
+  const { hero, about, projects, gallery, services, experience, skills, contact, socials, content, theme } =
+    config;
+  const [openProject, setOpenProject] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const orderedSections = [...config.sections]
+    .sort((a, b) => a.order - b.order)
+    .filter((entry) => entry.visible);
+  const visibleSectionIds = new Set<string>(orderedSections.map((entry) => entry.id));
+
   useEffect(() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+
     /* ── Custom cursor ── */
     const cursor = cursorRef.current;
     const moveCursor = (e: MouseEvent) => {
@@ -126,21 +100,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       cursor.style.left = `${e.clientX}px`;
       cursor.style.top = `${e.clientY}px`;
     };
-    window.addEventListener("mousemove", moveCursor);
+    if (finePointer) window.addEventListener("mousemove", moveCursor);
 
     const hoverables = document.querySelectorAll<HTMLElement>("a,button,[data-hover]");
     const enterHover = () => cursor?.classList.add("hovered");
     const leaveHover = () => cursor?.classList.remove("hovered");
-    hoverables.forEach((el) => {
+    if (finePointer) hoverables.forEach((el) => {
       el.addEventListener("mouseenter", enterHover);
       el.addEventListener("mouseleave", leaveHover);
     });
 
     /* ── Hero text reveal ── */
     const reveals = document.querySelectorAll<HTMLElement>(".reveal-text");
-    reveals.forEach((el, i) =>
-      setTimeout(() => el.classList.add("visible"), 120 * (i + 1))
-    );
+    reveals.forEach((el, i) => {
+      if (reduceMotion) el.classList.add("visible");
+      else setTimeout(() => el.classList.add("visible"), 120 * (i + 1));
+    });
 
     /* ── Scroll reveal ── */
     const io = new IntersectionObserver(
@@ -155,6 +130,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       { threshold: 0.08, rootMargin: "0px 0px -60px 0px" }
     );
     document.querySelectorAll(".scroll-fade").forEach((el) => io.observe(el));
+
+    /* ── 3D hero mouse tracking (drives parallax + tilt springs) ── */
+    const heroEl = heroRef.current;
+    const trackHeroMouse = (e: MouseEvent) => {
+      if (!heroEl || !finePointer || reduceMotion) return;
+      const rect = heroEl.getBoundingClientRect();
+      mx.set((e.clientX - rect.left) / rect.width - 0.5);
+      my.set((e.clientY - rect.top) / rect.height - 0.5);
+    };
+    const resetHeroMouse = () => { mx.set(0); my.set(0); };
+    heroEl?.addEventListener("mousemove", trackHeroMouse);
+    heroEl?.addEventListener("mouseleave", resetHeroMouse);
 
     /* ── Navbar hide on scroll down ── */
     let lastY = 0;
@@ -181,19 +168,30 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       }
       marqueeRaf = requestAnimationFrame(animateMarquee);
     };
-    marqueeRaf = requestAnimationFrame(animateMarquee);
+    marqueeRaf = reduceMotion ? 0 : requestAnimationFrame(animateMarquee);
 
     return () => {
       window.removeEventListener("mousemove", moveCursor);
       window.removeEventListener("scroll", handleScroll);
+      heroEl?.removeEventListener("mousemove", trackHeroMouse);
+      heroEl?.removeEventListener("mouseleave", resetHeroMouse);
       hoverables.forEach((el) => {
         el.removeEventListener("mouseenter", enterHover);
         el.removeEventListener("mouseleave", leaveHover);
       });
       io.disconnect();
-      cancelAnimationFrame(marqueeRaf);
+      if (marqueeRaf) cancelAnimationFrame(marqueeRaf);
     };
-  }, []);
+    /* Re-runs when config resolves/changes so freshly rendered or reordered
+       sections get their reveal observers and marquee track re-attached. */
+  }, [config, mx, my]);
+
+  useEffect(() => {
+    document.body.style.overflow = mobileMenuOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileMenuOpen]);
 
   /* ── Keep the contribution calendar aligned with the hero buttons ──
      The graph mirrors the rendered width of the "View Work" / "Get In Touch"
@@ -219,37 +217,33 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
      and caches it for 24h. ── */
 
   return (
-    <div className="editorial-root">
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
-      />
-
+    <main className={introDone ? "editorial-root" : "editorial-root is-loading"}>
+      <WordsPreloader fullscreen duration={2900} onComplete={() => setIntroDone(true)} />
       <style>{`
         /* ── Reset ─────────────────────────────────────────────────── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-          --bg:       #0C0C0C;
-          --surface:  #141414;
+          --bg:       ${theme.bg};
+          --surface:  ${theme.surface};
           --white:    #FFFFFF;
-          --muted:    rgba(255,255,255,0.45);
+          --muted:    rgba(255,255,255,0.56);
           --border:   rgba(255,255,255,0.10);
-          --amber:    #F5A623;
-          --amber-dim:#C78419;
+          --amber:    ${theme.accent};
+          --amber-dim:${theme.accentDim};
           --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
           --ease-circ: cubic-bezier(0.85, 0, 0.15, 1);
         }
 
         /* ── Body ──────────────────────────────────────────────────── */
-        .editorial-root {
+         .editorial-root {
           background: var(--bg);
           color: var(--white);
           font-family: 'Inter', sans-serif;
           min-height: 100vh;
           /* overflow-x: clip (not hidden) so position: sticky works in descendants */
           overflow-x: clip;
-          cursor: none;
-        }
+           cursor: none;
+         }
 
         /* ── Custom cursor ─────────────────────────────────────────── */
         #ed-cursor {
@@ -265,10 +259,11 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
                       height 0.25s var(--ease-expo),
                       background-color 0.25s ease;
         }
-        #ed-cursor.hovered {
-          width: 44px; height: 44px;
-          background: var(--amber);
-          opacity: 0.75;
+         #ed-cursor.hovered {
+           width: 24px; height: 24px;
+           background: transparent;
+           border: 1px solid var(--amber);
+           opacity: 1;
         }
 
         /* ── Nav ───────────────────────────────────────────────────── */
@@ -280,7 +275,35 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           border-bottom: 1px solid var(--border);
           background: rgba(12,12,12,0.85);
           backdrop-filter: blur(14px);
-          transition: transform 0.4s var(--ease-expo);
+          transition: transform 0.4s var(--ease-expo), opacity 0.6s ease, visibility 0.6s;
+        }
+        /* Hide chrome while the words intro plays — only loader words visible.
+           Nav + cursor fade/slide in right after the wipe completes. */
+        #main-nav {
+          opacity: 1;
+          visibility: visible;
+        }
+        .editorial-root.is-loading #main-nav {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
+          transform: translateY(-100%) !important;
+        }
+        .editorial-root:not(.is-loading) #main-nav {
+          animation: nav-drop-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes nav-drop-in {
+          from { opacity: 0; transform: translateY(-100%); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .editorial-root.is-loading #ed-cursor,
+        .editorial-root.is-loading .hero-signal,
+        .editorial-root.is-loading .scroll-hint,
+        .editorial-root.is-loading .mobile-menu,
+        .editorial-root.is-loading .viewport-edge {
+          opacity: 0 !important;
+          visibility: hidden !important;
+          pointer-events: none !important;
         }
         .nav-logo {
           font-family: 'Syne', sans-serif;
@@ -297,7 +320,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-weight: 500;
           letter-spacing: 0.15em;
           text-transform: uppercase;
-          color: var(--muted);
+          color: rgba(255,255,255,0.58);
           text-decoration: none;
           transition: color 0.3s ease;
           position: relative;
@@ -321,14 +344,22 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           text-decoration: none;
           transition: opacity 0.3s;
         }
-        .nav-available:hover { opacity: 0.7; }
+         .nav-available:hover { opacity: 0.7; }
+         .mobile-menu-toggle { display: none; }
+         .mobile-menu { display: none; }
+         .nav-link:focus-visible, .nav-available:focus-visible, .nav-logo:focus-visible,
+         .btn-solid:focus-visible, .btn-ghost:focus-visible, .social-link:focus-visible,
+         .footer-logo:focus-visible {
+           outline: 1px solid var(--amber);
+           outline-offset: 0.35rem;
+         }
 
         /* ── Section wrapper ───────────────────────────────────────── */
-        .ed-container {
-          max-width: 1440px;
-          margin: 0 auto;
-          padding: 0 4rem;
-        }
+         .ed-container {
+           max-width: 1440px;
+           margin: 0 auto;
+           padding: 0 4rem;
+         }
         .divider {
           height: 1px;
           background: var(--border);
@@ -347,15 +378,42 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Hero ──────────────────────────────────────────────────── */
-        .hero {
-          min-height: 100vh;
-          display: flex; flex-direction: column; justify-content: flex-end;
-          padding-top: 9rem;
-          padding-bottom: 4rem;
+         .hero {
+           min-height: 100vh;
+           display: flex; flex-direction: column; justify-content: flex-end;
+           padding-top: 9rem;
+           padding-left: 4rem;
+           padding-right: 4rem;
+           padding-bottom: 4rem;
           position: relative;
           isolation: isolate;
-          overflow: hidden;
-        }
+           overflow: hidden;
+         }
+         .hero::before {
+           content: '';
+           position: absolute;
+           inset: 0;
+           z-index: -1;
+           opacity: 0.28;
+           background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+           background-size: 5rem 5rem;
+           mask-image: linear-gradient(to bottom, transparent, black 20%, black 72%, transparent);
+         }
+         .hero::after {
+           content: '';
+           position: absolute;
+           top: 18%;
+           right: -12rem;
+           width: 32rem;
+           height: 32rem;
+           z-index: -1;
+           border: 1px solid rgba(245,166,35,0.18);
+           border-radius: 50%;
+           box-shadow: 0 0 0 2rem rgba(245,166,35,0.025), 0 0 0 6rem rgba(245,166,35,0.02);
+           animation: hero-orbit 18s linear infinite;
+           pointer-events: none;
+         }
+         @keyframes hero-orbit { to { transform: rotate(360deg); } }
         .matrix-rain {
           position: absolute;
           inset: 0;
@@ -401,7 +459,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-weight: 800;
           line-height: 0.9;
           letter-spacing: -0.04em;
-          font-size: clamp(4rem, 11vw, 10rem);
+           font-size: clamp(3.75rem, 10vw, 9.5rem);
           text-transform: uppercase;
           margin-bottom: 3rem;
           position: relative;
@@ -414,26 +472,86 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
         .hero-headline .line-bold { display: block; }
         .hero-headline .accent-dot { color: var(--amber); }
+        /* 3D hero layers */
+        .hero-tilt { transform-style: preserve-3d; will-change: transform; }
+        .ht-line { display: block; overflow: hidden; transform-style: preserve-3d; }
+        .hero { overflow: clip; }
+        /* Viewport edge glow: fixed to the screen edges (not the hero box),
+           so shades spread past the container to the true page borders.
+           Left = green, right = gold. Inside stays pure dark. */
+        .viewport-edge {
+          position: fixed; top: 0; bottom: 0; width: min(22vw, 340px);
+          pointer-events: none; z-index: 1;
+        }
+        .viewport-edge-left {
+          left: 0;
+          background:
+            radial-gradient(130% 34% at 0% 12%, rgba(91,255,143,0.13), transparent 65%),
+            radial-gradient(130% 34% at 0% 88%, rgba(91,255,143,0.10), transparent 65%),
+            linear-gradient(90deg, rgba(91,255,143,0.05), transparent);
+        }
+        .viewport-edge-right {
+          right: 0;
+          background:
+            radial-gradient(130% 34% at 100% 12%, rgba(245,166,35,0.15), transparent 65%),
+            radial-gradient(130% 34% at 100% 88%, rgba(245,166,35,0.11), transparent 65%),
+            linear-gradient(270deg, rgba(245,166,35,0.05), transparent);
+        }
 
         /* Text reveal */
-        .reveal-text {
-          opacity: 0;
-          transform: translateY(50px);
-          transition: opacity 1s var(--ease-expo), transform 1s var(--ease-expo);
-        }
-        .reveal-text.visible { opacity: 1; transform: translateY(0); }
+         .reveal-text {
+           opacity: 0;
+           transform: translateY(50px);
+           transition: opacity 1s var(--ease-expo), transform 1s var(--ease-expo);
+         }
+         .reveal-text { animation: hero-line-in 1.15s var(--ease-expo) 1.45s both; }
+         .reveal-text.delay-1 { animation-delay: 1.58s; }
+         .reveal-text.delay-2 { animation-delay: 1.72s; }
+         @keyframes hero-line-in { from { opacity: 0; transform: translateY(50px); clip-path: inset(0 0 100% 0); } to { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); } }
+         .reveal-text.visible { opacity: 1; transform: translateY(0); }
 
         /* Scroll fade */
-        .scroll-fade {
-          opacity: 0;
-          transform: translateY(36px);
-          transition: opacity 0.9s var(--ease-expo), transform 0.9s var(--ease-expo);
-        }
-        .scroll-fade.visible { opacity: 1; transform: translateY(0); }
-        .delay-1 { transition-delay: 100ms; }
+         .scroll-fade {
+           opacity: 0;
+           transform: translateY(36px);
+           clip-path: inset(0 0 18px 0);
+           transition: opacity 0.9s var(--ease-expo), transform 0.9s var(--ease-expo), clip-path 0.9s var(--ease-expo);
+         }
+         .scroll-fade.visible { opacity: 1; transform: translateY(0); clip-path: inset(0 0 0 0); }
+         .project-item.scroll-fade { transition-delay: 0ms; }
+         .delay-1 { transition-delay: 100ms; }
         .delay-2 { transition-delay: 200ms; }
         .delay-3 { transition-delay: 320ms; }
-        .delay-4 { transition-delay: 440ms; }
+         .delay-4 { transition-delay: 440ms; }
+         .section-header { position: relative; }
+         .section-header::after {
+           position: absolute;
+           left: 0;
+           bottom: -1rem;
+           width: 0;
+           height: 1px;
+           background: var(--amber);
+           content: '';
+           transition: width 1s var(--ease-expo);
+         }
+         .section-header.visible::after { width: min(8rem, 22vw); }
+         .hero-signal {
+           position: absolute;
+           top: 7.5rem;
+           left: 4rem;
+           display: flex;
+           align-items: center;
+           gap: 0.65rem;
+           z-index: 1;
+           color: var(--muted);
+           font-family: 'JetBrains Mono', monospace;
+           font-size: 0.6rem;
+           letter-spacing: 0.18em;
+           text-transform: uppercase;
+         }
+         .hero-signal::before { content: ''; width: 0.45rem; height: 0.45rem; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); animation: signal-pulse 2.4s ease-in-out infinite; }
+         @keyframes signal-pulse { 50% { box-shadow: 0 0 0 0.55rem rgba(245,166,35,0); } }
+         .hero .hero-scan { position: absolute; top: 7.2rem; right: 8rem; z-index: 1; opacity: 0.8; }
 
         .hero-sub {
           display: grid;
@@ -530,20 +648,20 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .marquee-item span { color: var(--amber); margin: 0 1rem; }
 
         /* ── Work section ──────────────────────────────────────────── */
-        .work-section { padding: 6rem 0; }
+         .work-section { padding: 6rem 4rem; }
         .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3rem; }
         .section-big-num {
           font-family: 'Syne', sans-serif;
           font-size: clamp(3rem, 7vw, 6rem);
           font-weight: 800;
           letter-spacing: -0.04em;
-          color: rgba(255,255,255,0.06);
+          color: rgba(255,255,255,0.36);
           line-height: 1;
         }
 
         /* Project rows */
         .project-list { border-top: 1px solid var(--border); }
-        .project-row {
+         .project-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -554,7 +672,13 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           position: relative;
           overflow: hidden;
           transition: background-color 0.4s var(--ease-expo);
-          cursor: none;
+           cursor: none;
+           width: 100%;
+           text-align: left;
+           font: inherit;
+           border-left: 0;
+           border-right: 0;
+           border-top: 0;
         }
         .project-row::after {
           content: '';
@@ -567,10 +691,44 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .project-row:hover { background: var(--surface); }
         .project-row:hover::after { width: 100%; }
         .project-row:hover .project-title { color: var(--amber); }
-        .project-row:hover .project-arrow { transform: rotate(-45deg) translate(4px,-4px); }
-        .project-row:hover .project-num { color: var(--amber); }
+         .project-row:hover .project-num { color: var(--amber); }
+         .project-row[aria-expanded="true"] { background: var(--surface); }
+         .project-row[aria-expanded="true"] .project-title,
+         .project-row[aria-expanded="true"] .project-num { color: var(--amber); }
+         .project-row[aria-expanded="true"]::after { width: 100%; }
+         .project-row:focus-visible { outline: 2px solid var(--amber); outline-offset: -3px; }
+         .project-toggle { position: relative; display: inline-block; width: 1.2rem; height: 1.2rem; flex: 0 0 1.2rem; color: var(--muted); transition: color 250ms ease; }
+         .project-toggle::before, .project-toggle::after { position: absolute; top: 50%; left: 10%; width: 80%; height: 1px; background: currentColor; content: ''; transition: transform 400ms var(--ease-expo), opacity 250ms ease; }
+         .project-toggle::after { transform: rotate(90deg); }
+         .project-row[aria-expanded="true"] .project-toggle { color: var(--amber); }
+         .project-row[aria-expanded="true"] .project-toggle::after { transform: rotate(0); opacity: 0; }
+         .project-details {
+           display: grid;
+           grid-template-rows: 0fr;
+           overflow: hidden;
+           transition: grid-template-rows 0.55s var(--ease-expo), opacity 0.35s ease;
+           opacity: 0;
+         }
+         .project-details[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+         .project-details > div { min-height: 0; overflow: hidden; }
 
-        .project-left { display: flex; align-items: center; gap: 2.5rem; flex: 1; }
+         /* ── About and skills ─────────────────────────────────────── */
+         .about-section, .skills-section { padding: 6rem 4rem; }
+         .about-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 4rem; align-items: start; }
+         .about-headline {
+           font-family: 'Syne', sans-serif;
+           font-size: clamp(2rem, 4vw, 4rem);
+           line-height: 1;
+           letter-spacing: -0.04em;
+         }
+         .about-body { color: var(--muted); font-size: clamp(1rem, 1.6vw, 1.35rem); line-height: 1.75; max-width: 48rem; }
+         .skills-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+         .skill-chip { display: inline-flex; flex-direction: column; gap: 0.35rem; border: 1px solid var(--border); padding: 1rem 1.1rem; min-width: 9rem; transition: border-color 0.3s ease, background 0.3s ease; }
+         .skill-chip:hover { border-color: var(--amber); background: var(--surface); }
+         .skill-name { font-family: 'Syne', sans-serif; font-weight: 700; }
+         .skill-level { color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+        .project-left { display: flex; align-items: center; gap: 2.5rem; flex: 1; min-width: 0; }
         .project-num {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.7rem;
@@ -585,6 +743,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           letter-spacing: -0.02em;
           transition: color 0.4s var(--ease-expo);
           line-height: 1.1;
+          overflow-wrap: anywhere;
         }
         .project-tags {
           display: flex; gap: 0.6rem; flex-wrap: wrap;
@@ -599,7 +758,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           padding: 0.2rem 0.6rem;
         }
         .project-meta {
-          display: flex; align-items: center; gap: 2rem; flex-shrink: 0;
+          display: flex; align-items: center; gap: 2rem; flex-shrink: 0; margin-left: 1.5rem;
         }
         .project-year {
           font-family: 'JetBrains Mono', monospace;
@@ -613,13 +772,14 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Services grid ─────────────────────────────────────────── */
-        .services-section { padding: 6rem 0; }
+         .services-section { padding: 6rem 4rem; }
         .services-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           border: 1px solid var(--border);
         }
         .service-card {
+          position: relative;
           padding: 3rem;
           border: 1px solid var(--border);
           margin: -1px 0 0 -1px;
@@ -627,15 +787,17 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           cursor: none;
         }
         .service-card:hover { background: var(--surface); }
+        .service-card::before { position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--amber); transform: scaleX(0); transform-origin: left; transition: transform 550ms var(--ease-expo); content: ''; }
+        .service-card:hover::before { transform: scaleX(1); }
         .service-card:hover .service-explore { color: var(--amber); }
         .service-icon {
           font-size: 2rem;
           color: var(--muted);
           margin-bottom: 1.5rem;
           display: block;
-          transition: color 0.3s ease;
+          transition: color 0.3s ease, transform 0.5s var(--ease-expo);
         }
-        .service-card:hover .service-icon { color: var(--amber); }
+        .service-card:hover .service-icon { color: var(--amber); transform: translateY(-5px) rotate(-8deg); }
         .service-title {
           font-family: 'Syne', sans-serif;
           font-size: 1.3rem;
@@ -663,7 +825,7 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         }
 
         /* ── Experience ────────────────────────────────────────────── */
-        .exp-section { padding: 6rem 0; }
+         .exp-section { padding: 6rem 4rem; }
         .exp-table { width: 100%; border-collapse: collapse; }
         .exp-row {
           border-bottom: 1px solid var(--border);
@@ -714,7 +876,8 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
         .exp-row:hover .exp-chip { border-color: var(--amber); color: var(--amber); }
 
         /* ── Contact ───────────────────────────────────────────────── */
-        .contact-section { padding: 6rem 0 8rem; }
+         .contact-section { padding: 6rem 4rem 8rem; }
+         .contact-scan { margin: 0 0 2.5rem auto; opacity: 0.72; }
         .contact-headline {
           font-family: 'Syne', sans-serif;
           font-weight: 800;
@@ -728,6 +891,9 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           font-style: italic;
           color: var(--amber);
         }
+        .contact-line { display: block; }
+        .contact-headline.visible .contact-line { animation: contact-line-reveal 850ms var(--ease-expo) both; animation-delay: var(--line-delay, 0ms); }
+        @keyframes contact-line-reveal { from { clip-path: inset(0 0 100% 0); transform: translateY(20px); } to { clip-path: inset(0); transform: translateY(0); } }
         .contact-email {
           font-family: 'Syne', sans-serif;
           font-size: clamp(1.1rem, 2.5vw, 2rem);
@@ -741,7 +907,10 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           display: inline-block;
           margin-bottom: 2.5rem;
         }
-        .contact-email:hover { border-color: var(--amber); color: var(--amber); }
+         .contact-email:hover { border-color: var(--amber); color: var(--amber); }
+         .contact-orbit { position: relative; display: inline-block; }
+         .contact-orbit::after { content: ''; position: absolute; inset: -1.4rem -2rem; border: 1px solid rgba(245,166,35,0.2); border-radius: 50%; transform: rotate(-8deg); pointer-events: none; transition: transform 0.5s var(--ease-expo), border-color 0.3s ease; }
+         .contact-orbit:hover::after { transform: rotate(5deg) scale(1.03); border-color: rgba(245,166,35,0.7); }
         .contact-actions { display: flex; gap: 1rem; margin-bottom: 4rem; flex-wrap: wrap; }
         .social-row { display: flex; gap: 2rem; flex-wrap: wrap; border-top: 1px solid var(--border); padding-top: 2rem; }
         .social-link {
@@ -774,25 +943,80 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           color: var(--white);
           text-decoration: none;
         }
-        .footer-copy {
+         .footer-copy {
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.65rem;
           letter-spacing: 0.1em;
-          color: var(--muted);
+           color: rgba(255,255,255,0.58);
         }
 
         /* ── Responsive ────────────────────────────────────────────── */
-        @media (max-width: 900px) {
+         @media (max-width: 900px) {
+           #ed-cursor { display: none; }
+           .editorial-root, .project-row, .service-card, .btn-solid, .btn-ghost { cursor: auto; }
           #main-nav { padding: 1.25rem 1.5rem; }
-          .nav-links, .nav-available { display: none; }
-          .ed-container { padding: 0 1.5rem; }
+           .nav-links, .nav-available { display: none; }
+           .mobile-menu-toggle { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0; border: 0; background: transparent; color: var(--white); font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer; }
+           .mobile-menu-toggle::before { width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 0.25rem rgba(245,166,35,0.12); content: ''; }
+           .mobile-menu { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.25rem; padding: 7rem 1.5rem 2rem; background: rgba(12,12,12,0.97); }
+           .mobile-menu::before { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px); background-size: 4rem 4rem; content: ''; opacity: 0.6; pointer-events: none; }
+           .mobile-menu-link { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border); color: var(--white); font-family: 'Syne', sans-serif; font-size: clamp(2rem, 10vw, 3.5rem); font-weight: 700; letter-spacing: -0.05em; text-decoration: none; }
+           .mobile-menu-link span { color: var(--amber); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; letter-spacing: 0.14em; }
+           .mobile-menu-meta { position: relative; z-index: 1; margin-top: auto; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 0.58rem; letter-spacing: 0.15em; text-transform: uppercase; }
+           .ed-container,
+           .hero,
+           .work-section,
+           .about-section,
+           .services-section,
+           .exp-section,
+           .skills-section,
+           .contact-section { padding-left: 1.5rem; padding-right: 1.5rem; }
           .hero-sub { grid-template-columns: 1fr; }
           .hero-actions-block { align-items: flex-start; }
           .hero-buttons { justify-content: flex-start; }
           .services-grid { grid-template-columns: 1fr; }
           .ed-footer { flex-direction: column; gap: 1rem; padding: 1.5rem; text-align: center; }
-          .project-tags { display: none; }
-        }
+           .project-tags { display: none; }
+           .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+           .hero-signal { left: 1.5rem; }
+           .hero .hero-scan { top: 7.2rem; right: 1.5rem; transform: scale(0.72); transform-origin: right center; }
+           .hero::after { right: -18rem; top: 20%; }
+           .hero-headline { font-size: clamp(2.55rem, 11.5vw, 4.8rem); letter-spacing: -0.07em; line-height: 0.86; overflow-wrap: normal; }
+           .hero { min-height: auto; padding-top: 9.5rem; padding-bottom: 3rem; }
+           .hero-signal { top: 7.4rem; }
+           .hero-description { font-size: 1rem; }
+           .hero-actions-block { gap: 1.4rem; }
+           .hero-buttons { width: 100%; }
+           .hero-buttons .btn-solid, .hero-buttons .btn-ghost { flex: 1; padding-left: 0.75rem; padding-right: 0.75rem; text-align: center; }
+           .hero-stats { width: 100% !important; overflow-x: auto; }
+           .section-header { margin-bottom: 2.2rem !important; }
+           .section-big-num { font-size: clamp(2.7rem, 14vw, 4rem); }
+         }
+         @media (max-height: 700px) and (min-width: 901px) {
+           .hero { padding-top: 7rem; padding-bottom: 2.5rem; }
+           .hero-headline { margin-bottom: 1.5rem; font-size: clamp(3.25rem, 9vw, 7rem); }
+           .hero-signal { top: 5.5rem; }
+         }
+         @media (min-width: 901px) and (max-width: 1400px) {
+           .hero-headline { font-size: clamp(3.75rem, 10vw, 8rem); }
+         }
+         @media (max-width: 680px) {
+           .project-row { padding: 1.4rem 0.75rem; align-items: flex-start; gap: 1rem; }
+           .project-left { gap: 0.75rem; }
+           .project-num { min-width: 1.4rem; padding-top: 0.25rem; }
+           .project-title { font-size: 1.15rem; line-height: 1.25; }
+           .project-meta { margin-left: 0; gap: 0.7rem; padding-top: 0.25rem; }
+           .project-year { display: none; }
+         }
+
+         @media (pointer: coarse) { .editorial-root, .project-row, .service-card { cursor: auto; } #ed-cursor { display: none; } }
+         @media (prefers-reduced-motion: reduce) {
+           *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+           .marquee-track { transform: none !important; }
+           .hero::after, .hero-signal::before { animation: none; }
+           .reveal-text { animation: none; }
+           .mobile-menu { animation: none; }
+         }
 
         /* ── Scroll bar ────────────────────────────────────────────── */
         ::-webkit-scrollbar { width: 4px; }
@@ -803,21 +1027,60 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
       {/* ── Custom Cursor ────────────────────────────────────────── */}
       <div id="ed-cursor" ref={cursorRef} />
 
-      {/* ── Navbar ───────────────────────────────────────────────── */}
-      <nav id="main-nav">
-        <a href="#home" className="nav-logo">NK.</a>
-        <div className="nav-links">
-          <a href="#work" className="nav-link">Work</a>
-          <a href="#services" className="nav-link">Service</a>
-          <a href="#experience" className="nav-link">Experience</a>
-          <a href="#contact" className="nav-link">Contact</a>
-        </div>
-        <a href="#contact" className="nav-available">Available →</a>
-      </nav>
+      {/* ── Viewport edge glow (fixed to screen borders, not the hero box) ── */}
+      <div className="viewport-edge viewport-edge-left" aria-hidden="true" />
+      <div className="viewport-edge viewport-edge-right" aria-hidden="true" />
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section id="home" className="hero ed-container">
-        <div className="matrix-rain" aria-hidden="true">
+      {/* ── Navbar ───────────────────────────────────────────────── */}
+       <nav id="main-nav">
+         <a href="#home" className="nav-logo">NK.</a>
+         <div className="nav-links">
+          {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id)).map((link) => (
+            <a key={link.id} href={`#${link.id}`} className="nav-link">{link.label}</a>
+          ))}
+         </div>
+         <a href="#contact" className="nav-available">Available →</a>
+         <button
+           type="button"
+           className="mobile-menu-toggle"
+           aria-expanded={mobileMenuOpen}
+           aria-controls="mobile-menu"
+           onClick={() => setMobileMenuOpen((open) => !open)}
+         >
+           {mobileMenuOpen ? "Close" : "Menu"}
+         </button>
+       </nav>
+       {mobileMenuOpen && (
+         <div id="mobile-menu" className="mobile-menu">
+           {NAV_LINKS.filter((link) => visibleSectionIds.has(link.id))
+             .map((item, index) => (
+               <a
+                 key={item.id}
+                 href={`#${item.id}`}
+                 className="mobile-menu-link"
+                 onClick={() => setMobileMenuOpen(false)}
+               >
+                 {item.label}
+                 <span>{String(index + 1).padStart(2, "0")}</span>
+               </a>
+             ))}
+           <p className="mobile-menu-meta">AI systems / voice / retrieval / agents</p>
+         </div>
+       )}
+       {orderedSections.map((section) => (
+        <Fragment key={section.id}>
+          {/* ── Hero ─────────────────────────────────────────────────── */}
+          {section.id === "hero" && (
+            <>
+      <motion.section
+        id="home"
+        ref={heroRef}
+        className="hero ed-container"
+        style={{ scale: heroScale, rotateX: heroRotX, opacity: heroOpacity, transformPerspective: 1100 }}
+      >
+        <motion.div className="hero-signal" aria-hidden="true" style={{ x: layerFgX, y: layerFgY }}>Live signal / portfolio 01</motion.div>
+        <AmbientScan className="hero-scan" />
+        <motion.div className="matrix-rain" aria-hidden="true" style={{ x: layerBgX, y: layerBgY }}>
           {MATRIX_COLUMNS.map((column, index) => (
             <span
               key={index}
@@ -831,109 +1094,166 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
               {column}
             </span>
           ))}
-        </div>
+        </motion.div>
 
-        <h1 className="hero-headline">
-          <span className="line-light reveal-text">AI Engineer</span>
-          <span className="line-bold reveal-text delay-1">Building the</span>
-          <span className="line-bold reveal-text delay-2">
-            Future<span className="accent-dot">.</span>
-          </span>
-        </h1>
+        <motion.h1
+          className="hero-headline hero-tilt"
+          style={{ rotateX: tiltX, rotateY: tiltY, x: layerFgX, transformPerspective: 1000 }}
+          initial={false}
+          animate={introDone ? "in" : "hidden"}
+          variants={{ hidden: {}, in: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } } }}
+        >
+          <motion.span className="line-light ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line1}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>{hero.headline.line2}</motion.span>
+          <motion.span className="line-bold ht-line" variants={{ hidden: { y: "110%", rotateX: -55, opacity: 0 }, in: { y: "0%", rotateX: 0, opacity: 1, transition: { duration: 0.9, ease: [0.22, 1, 0.36, 1] } } }}>
+            {hero.headline.line3}<span className="accent-dot">{hero.headline.accent}</span>
+          </motion.span>
+        </motion.h1>
 
-        <div className="hero-sub scroll-fade delay-3">
+        <motion.div
+          className="hero-sub"
+          initial={false}
+          animate={introDone ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+          transition={{ duration: 0.8, delay: introDone ? 0.7 : 0, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="hero-description">
-            I build voice AI, autonomous agents, and reliable RAG systems — bridging cutting-edge research and production-ready intelligent products.
+            {hero.description}
           </p>
           <div className="hero-actions-block">
             <div className="hero-buttons" ref={buttonsRef}>
-              <a href="#work" className="btn-solid">View Work</a>
-              <a href="#contact" className="btn-ghost">Get In Touch</a>
+              <MagneticButton href={hero.primaryCta.href} className="btn-solid">{hero.primaryCta.label}</MagneticButton>
+              <MagneticButton href={hero.secondaryCta.href} className="btn-ghost">{hero.secondaryCta.label}</MagneticButton>
             </div>
             <div className="hero-stats" ref={statsRef}>
               <ContributionCalendar />
             </div>
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
+            </>
+          )}
+          {section.id === "hero" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
-
-      {/* ── Marquee ──────────────────────────────────────────────── */}
+          {/* ── Marquee ──────────────────────────────────────────────── */}
+          {section.id === "marquee" && (
+            <>
       <div className="marquee-wrapper">
         <div id="marquee-track" className="marquee-track">
           {Array(6).fill(0).map((_, i) => (
             <div key={i} className="marquee-item" style={{ display: "flex", alignItems: "center", gap: "3rem" }}>
-              <span>Voice AI</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>RAG Systems</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Autonomous Agents</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Computer Vision</span><span style={{ color: "#F5A623" }}>✦</span>
-              <span>Full-Stack AI</span><span style={{ color: "#F5A623" }}>✦</span>
+              {content.marquee.map((text, j) => (
+                <Fragment key={j}>
+                   {j > 0 && <span aria-hidden="true" style={{ color: theme.accent }}>✦</span>}
+                  <span>{text}</span>
+                </Fragment>
+              ))}
             </div>
           ))}
         </div>
       </div>
+            </>
+          )}
 
-      {/* ── Work Section ─────────────────────────────────────────── */}
+          {/* ── About ────────────────────────────────────────────────── */}
+          {section.id === "about" && (
+            <>
+              <section id="about" className="about-section ed-container">
+                <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
+                  <p className="section-label">— About</p>
+                  <p className="section-big-num">00</p>
+                </div>
+                <div className="about-grid scroll-fade delay-1">
+                  <h2 className="about-headline">{about.headline}</h2>
+                  <p className="about-body">{about.body}</p>
+                </div>
+              </section>
+            </>
+          )}
+          {section.id === "about" && section.dividerAfter && <div className="divider" />}
+
+          {/* ── Work Section ─────────────────────────────────────────── */}
+          {section.id === "work" && (
+            <>
       <section id="work" className="work-section ed-container">
         <div className="section-header scroll-fade">
           <div>
-            <p className="section-label">— Selected Work</p>
-            <p className="section-big-num">01</p>
+            <p className="section-label">{projects.label}</p>
+            <p className="section-big-num">{projects.number}</p>
           </div>
-          <a
-            href="https://github.com/nithincodesx"
+          <MagneticButton
+            href={projects.allProjectsHref}
             target="_blank" rel="noreferrer"
             className="btn-ghost"
             style={{ alignSelf: "flex-end" }}
           >
-            All Projects →
-          </a>
+            {projects.allProjectsLabel}
+          </MagneticButton>
         </div>
 
         <div className="project-list">
-          {PROJECTS.map((p, i) => (
-            <a
-              key={p.num}
-              href={p.href}
-              target="_blank" rel="noreferrer"
-              className={`project-row scroll-fade delay-${(i % 4) + 1}`}
-            >
-              <div className="project-left">
-                <span className="project-num">{p.num}</span>
-                <span className="project-title">{p.title}</span>
-                <div className="project-tags">
-                  {p.tags.map(t => <span key={t} className="project-tag">{t}</span>)}
-                </div>
+          {projects.items.map((p, i) => {
+            const isOpen = openProject === p.num;
+            return (
+              <div key={p.num} className={`project-item scroll-fade delay-${(i % 4) + 1}`}>
+                 <button
+                   type="button"
+                   className="project-row"
+                   aria-expanded={isOpen}
+                   aria-controls={`project-panel-${p.num}`}
+                   onClick={() => setOpenProject(isOpen ? null : p.num)}
+                >
+                  <div className="project-left">
+                    <span className="project-num">{p.num}</span>
+                    <span className="project-title">{p.title}</span>
+                    <div className="project-tags">
+                      {p.tags.map(t => <span key={t} className="project-tag">{t}</span>)}
+                    </div>
+                  </div>
+                  <div className="project-meta">
+                    <span className="project-year">{p.year}</span>
+                    <span className="project-toggle" aria-hidden="true" />
+                  </div>
+                </button>
+                 <div id={`project-panel-${p.num}`} className="project-details" data-open={isOpen} aria-hidden={!isOpen} inert={!isOpen}>
+                   <div>
+                     <ProjectDetail
+                       project={p}
+                       open={isOpen}
+                       image={galleryImages.length > 0 ? galleryImages[i % galleryImages.length] : undefined}
+                     />
+                   </div>
+                 </div>
               </div>
-              <div className="project-meta">
-                <span className="project-year">{p.year}</span>
-                <span className="material-symbols-outlined project-arrow" style={{ fontSize: "1.5rem" }}>arrow_forward</span>
-              </div>
-            </a>
-          ))}
+            );
+          })}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "work" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
+          {/* ── Project Gallery (sticky image stack) ─────────────────────── */}
+          {section.id === "gallery" && gallery.enabled && (
+            <>
+      <ProjectGallery images={galleryImages} label={gallery.label} title={gallery.title} hint={gallery.hint} />
+      {section.dividerAfter && <div className="divider" />}
+            </>
+          )}
 
-      {/* ── Project Gallery (sticky image stack) ─────────────────────── */}
-      <ProjectGallery images={galleryImages} />
-
-      <div className="divider" />
-
-      {/* ── Services ─────────────────────────────────────────────── */}
+          {/* ── Services ─────────────────────────────────────────────── */}
+          {section.id === "services" && (
+            <>
       <section id="services" className="services-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
-            <p className="section-label">— What I Build</p>
-            <p className="section-big-num">02</p>
+            <p className="section-label">{services.label}</p>
+            <p className="section-big-num">{services.number}</p>
           </div>
         </div>
 
         <div className="services-grid scroll-fade delay-1">
-          {SERVICES.map((s) => (
-            <div key={s.title} className="service-card" data-hover="">
+           {services.items.map((s, index) => (
+             <div key={s.title} className="service-card scroll-fade" data-hover="" style={{ transitionDelay: `${index * 90}ms` }}>
               <span className="material-symbols-outlined service-icon">{s.icon}</span>
               <h3 className="service-title">{s.title}</h3>
               <p className="service-desc">{s.desc}</p>
@@ -942,23 +1262,26 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           ))}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "services" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
-
-      {/* ── Experience ───────────────────────────────────────────── */}
+          {/* ── Experience ───────────────────────────────────────────── */}
+          {section.id === "experience" && (
+            <>
       <section id="experience" className="exp-section ed-container">
         <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
           <div>
-            <p className="section-label">— Journey</p>
-            <p className="section-big-num">03</p>
+            <p className="section-label">{experience.label}</p>
+            <p className="section-big-num">{experience.number}</p>
           </div>
         </div>
 
         <div className="divider" />
         <table className="exp-table scroll-fade delay-1">
           <tbody>
-            {EXPERIENCE.map((e) => (
-              <tr key={e.period} className="exp-row">
+             {experience.items.map((e, index) => (
+               <tr key={e.period} className="exp-row scroll-fade" style={{ transitionDelay: `${index * 90}ms` }}>
                 <td className="exp-cell" style={{ width: "18%" }}>
                   <span className="exp-period">{e.period}</span>
                 </td>
@@ -977,35 +1300,57 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           </tbody>
         </table>
       </section>
+            </>
+          )}
+          {section.id === "experience" && section.dividerAfter && <div className="divider" />}
 
-      <div className="divider" />
+          {/* ── Skills ───────────────────────────────────────────────── */}
+          {section.id === "skills" && (
+            <>
+              <section id="skills" className="skills-section ed-container">
+                <div className="section-header scroll-fade" style={{ marginBottom: "2.5rem" }}>
+                  <p className="section-label">— Skills</p>
+                  <p className="section-big-num">04</p>
+                </div>
+                <div className="skills-grid scroll-fade delay-1">
+                  {skills.items.map((skill, index) => (
+                    <div key={skill.name} className="skill-chip scroll-fade" style={{ transitionDelay: `${index * 70}ms` }}>
+                      <span className="skill-name">{skill.name}</span>
+                      <span className="skill-level">{skill.level}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
+          {section.id === "skills" && section.dividerAfter && <div className="divider" />}
 
-      {/* ── Contact ──────────────────────────────────────────────── */}
+          {/* ── Contact ──────────────────────────────────────────────── */}
+          {section.id === "contact" && (
+            <>
       <section id="contact" className="contact-section ed-container">
-        <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>— Let&apos;s Talk</p>
+        <AmbientScan className="contact-scan" />
+        <p className="section-label scroll-fade" style={{ marginBottom: "2rem" }}>{contact.label}</p>
 
         <h2 className="contact-headline scroll-fade delay-1">
-          Let&apos;s Build<br />
-          Something<br />
-          <em>Intelligent.</em>
+          {contact.headline.map((line, i) => (
+            <span key={i} className="contact-line" style={{ "--line-delay": `${i * 110}ms` } as CSSProperties}>
+              {i === contact.headline.length - 1 ? <em>{line}</em> : line}
+            </span>
+          ))}
         </h2>
 
-        <a href="mailto:codesnithin@gmail.com" className="contact-email scroll-fade delay-2">
-          codesnithin@gmail.com
+        <a href={`mailto:${contact.email}`} className="contact-email scroll-fade delay-2">
+          {contact.email}
         </a>
 
         <div className="contact-actions scroll-fade delay-3">
-          <a href="mailto:codesnithin@gmail.com" className="btn-solid">Send a Message →</a>
-          <a href="/resume.pdf" target="_blank" rel="noreferrer" className="btn-ghost">Download CV ↓</a>
+          <MagneticButton href={`mailto:${contact.email}`} className="btn-solid">{contact.messageLabel}</MagneticButton>
+          <MagneticButton href={contact.resumeUrl} target="_blank" rel="noreferrer" className="btn-ghost">{contact.cvLabel}</MagneticButton>
         </div>
 
         <div className="social-row scroll-fade delay-4">
-          {[
-            { label: "GitHub", href: "https://github.com/nithincodesx" },
-            { label: "LinkedIn", href: "https://linkedin.com/in/nithincodes" },
-            { label: "Instagram", href: "https://instagram.com/nithincodez" },
-            { label: "Buy Me a Coffee", href: "https://buymeacoffee.com/nithincodes" },
-          ].map(s => (
+          {socials.items.map((s) => (
             <a key={s.label} href={s.href} target="_blank" rel="noreferrer" className="social-link">
               {s.label}
               <span className="material-symbols-outlined" style={{ fontSize: "0.9rem" }}>arrow_outward</span>
@@ -1013,13 +1358,18 @@ export function EditorialPortfolio({ galleryImages = [] }: { galleryImages?: Gal
           ))}
         </div>
       </section>
+            </>
+          )}
+          {section.id === "contact" && section.dividerAfter && <div className="divider" />}
+        </Fragment>
+      ))}
 
       {/* ── Footer ───────────────────────────────────────────────── */}
       <footer className="ed-footer">
-        <a href="#home" className="footer-logo">NK.</a>
-        <p className="footer-copy">Nithin Krishna © 2026</p>
-        <p className="footer-copy">Design &amp; Development by NK</p>
+        <a href="#home" className="footer-logo">{content.footer.logo}</a>
+        <p className="footer-copy">{content.footer.copyright}</p>
+        <p className="footer-copy">{content.footer.credit}</p>
       </footer>
-    </div>
+    </main>
   );
 }

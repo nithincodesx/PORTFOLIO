@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Public site configuration (siteConfig/main) ────────────────────────
+    // Reads are public: the portfolio website loads this document in the
+    // browser to render its content (all of it is public portfolio data
+    // anyway — it also lives in the repo as defaults).
+    //
+    // Writes are restricted to the signed-in admin account(s).
+    // IMPORTANT: replace the email(s) below with your own admin email and
+    // keep them in sync with NEXT_PUBLIC_ADMIN_EMAILS in .env.local.
+    match /siteConfig/{docId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email in [
+          'shulk6339@gmail.com'
+          // add more admin emails here if needed:
+          // , 'another-admin@example.com'
+        ];
+    }
+
+    // ── Default deny ────────────────────────────────────────────────────────
+    // Everything else in the database is completely private.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
