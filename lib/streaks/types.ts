@@ -1,6 +1,6 @@
 /** @file staqk types - shared types for streak tracking with UK timezone support */
 
-import type { SiteConfigKey } from "@/lib/cms/types";
+import type { SiteConfig, SiteConfigKey } from "@/lib/cms/types";
 
 /** A single day with activity flag and optional streak override */
 export type StreakDay = {
