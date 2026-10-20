@@ -54,11 +54,10 @@ export type StreakConfig = {
 };
 
 /** Extended site config with streak fields */
-export type SiteConfigWithStreaks = SiteConfigKey extends infer K
-  ? K extends "streaks"
-    ? StreakConfig & Record<string, unknown>
-    : SiteConfig[K]
-  : never;
+/** Extended site config with streak fields */
+export type SiteConfigWithStreaks = SiteConfig & {
+  streaks: StreakConfig & Record<string, unknown>;
+};
 
 /** Streak data structure for API responses */
 export type StreakData = {
